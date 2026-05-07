@@ -1,5 +1,33 @@
 import * as XLSX from 'xlsx'
-import { ExcelParseResult } from '@/types/nameplate'
+import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
+
+const FORMAT_SHEET = '서식'
+
+function parseFormatSheet(sheet: XLSX.WorkSheet): TextFieldConfig[] {
+  const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' })
+  return rows
+    .map((row, i) => {
+      const label = row['항목명']?.trim()
+      if (!label) return null
+      const align = row['정렬']
+      return {
+        id: `loaded-${i}-${label}`,
+        label,
+        fontSize: Math.max(8, Math.min(150, Number(row['폰트크기']) || 14)),
+        fontWeight: row['굵기'] === 'bold' ? 'bold' : 'normal',
+        fontFamily: row['폰트'] || '맑은 고딕',
+        textAlign: (['left', 'center', 'right'] as const).includes(align as 'left' | 'center' | 'right')
+          ? (align as 'left' | 'center' | 'right')
+          : 'center',
+        positionX: Number(row['X위치']) || 0,
+        positionY: Number(row['Y위치']) || 0,
+        widthPct: Number(row['너비']) || 80,
+        heightPct: Number(row['높이']) || 20,
+        color: row['색상'] || '#000000',
+      } satisfies TextFieldConfig
+    })
+    .filter((f): f is TextFieldConfig => f !== null)
+}
 
 export function normalizeHeader(header: string): string {
   return header.trim().toLowerCase()
@@ -45,8 +73,18 @@ export function parseExcelFile(
         }
 
         const headers = Object.keys(jsonData[0])
-        const { matched, unmatched, newColumns } = matchHeaders(headers, fieldLabels)
-        resolve({ rows: jsonData, matched, unmatched, newColumns })
+
+        // Load field configs from 서식 sheet if available
+        let fieldConfigs: TextFieldConfig[] | undefined
+        if (workbook.SheetNames.includes(FORMAT_SHEET)) {
+          const loaded = parseFormatSheet(workbook.Sheets[FORMAT_SHEET])
+          if (loaded.length > 0) fieldConfigs = loaded
+        }
+
+        // If we have fieldConfigs, recalculate newColumns against those labels
+        const effectiveLabels = fieldConfigs ? fieldConfigs.map((f) => f.label) : fieldLabels
+        const { matched, unmatched, newColumns } = matchHeaders(headers, effectiveLabels)
+        resolve({ rows: jsonData, matched, unmatched, newColumns, fieldConfigs })
       } catch (err) {
         reject(err)
       }

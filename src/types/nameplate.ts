@@ -29,7 +29,8 @@ export type NameplateState = {
 
 export type ExcelParseResult = {
   rows: Record<string, string>[]
-  matched: string[]       // field labels found in Excel
-  unmatched: string[]     // field labels NOT in Excel (will be empty)
-  newColumns: string[]    // Excel headers not in any field (auto-add candidates)
+  matched: string[]         // field labels found in Excel
+  unmatched: string[]       // field labels NOT in Excel (will be empty)
+  newColumns: string[]      // Excel headers not in any field (auto-add candidates)
+  fieldConfigs?: TextFieldConfig[]  // loaded from 서식 sheet, if present
 }

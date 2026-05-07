@@ -6,6 +6,7 @@ import { DEFAULT_SIZE, DEFAULT_FIELDS, SAMPLE_PREVIEW_DATA } from '@/lib/sizeCon
 type Action =
   | { type: 'SET_SIZE'; payload: NameplateSize }
   | { type: 'SET_BACKGROUND'; payload: string | null }
+  | { type: 'SET_FIELDS'; payload: TextFieldConfig[] }
   | { type: 'ADD_FIELD' }
   | { type: 'ADD_FIELD_WITH_LABEL'; payload: string }
   | { type: 'UPDATE_FIELD'; payload: TextFieldConfig }
@@ -42,6 +43,8 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       return { ...state, size: action.payload }
     case 'SET_BACKGROUND':
       return { ...state, backgroundImage: action.payload }
+    case 'SET_FIELDS':
+      return { ...state, fields: action.payload }
     case 'ADD_FIELD': {
       const maxBottom = state.fields.reduce((m, f) => Math.max(m, f.positionY + f.heightPct), 0)
       return { ...state, fields: [...state.fields, makeNewField('새 항목', maxBottom + 3)] }
@@ -110,6 +113,7 @@ export function useNameplateState() {
 
   const setSize = useCallback((size: NameplateSize) => dispatch({ type: 'SET_SIZE', payload: size }), [])
   const setBackground = useCallback((bg: string | null) => dispatch({ type: 'SET_BACKGROUND', payload: bg }), [])
+  const setFields = useCallback((fields: TextFieldConfig[]) => dispatch({ type: 'SET_FIELDS', payload: fields }), [])
   const addField = useCallback(() => dispatch({ type: 'ADD_FIELD' }), [])
   const addFieldWithLabel = useCallback((label: string) => dispatch({ type: 'ADD_FIELD_WITH_LABEL', payload: label }), [])
   const updateField = useCallback((field: TextFieldConfig) => dispatch({ type: 'UPDATE_FIELD', payload: field }), [])
@@ -133,7 +137,7 @@ export function useNameplateState() {
   )
 
   return {
-    state, setSize, setBackground, addField, addFieldWithLabel,
+    state, setSize, setBackground, setFields, addField, addFieldWithLabel,
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
   }

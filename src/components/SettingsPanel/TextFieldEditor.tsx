@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { TextFieldConfig } from '@/types/nameplate'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +10,49 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus } from 'lucide-react'
 import { useLocalFonts } from '@/hooks/useLocalFonts'
+
+// 포커스 시 입력을 초기화해서 datalist가 모든 폰트를 표시하도록 함
+function FontPicker({
+  value,
+  onChange,
+  listId,
+  fonts,
+}: {
+  value: string
+  onChange: (v: string) => void
+  listId: string
+  fonts: string[]
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const display = draft !== null ? draft : value
+
+  return (
+    <>
+      <input
+        list={listId}
+        value={display}
+        style={{ fontFamily: draft === null ? value : undefined }}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          if (e.target.value) onChange(e.target.value)
+        }}
+        onFocus={() => setDraft('')}
+        onBlur={() => {
+          if (draft !== null && draft.trim()) onChange(draft.trim())
+          setDraft(null)
+        }}
+        className="h-7 text-xs w-full rounded border border-input px-2"
+        placeholder={value}
+        spellCheck={false}
+      />
+      <datalist id={listId}>
+        {fonts.map((f) => (
+          <option key={f} value={f} />
+        ))}
+      </datalist>
+    </>
+  )
+}
 
 type Props = {
   fields: TextFieldConfig[]
@@ -58,20 +102,12 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground w-10 shrink-0">폰트</span>
               <div className="flex-1">
-                <input
-                  list={`fontlist-${field.id}`}
+                <FontPicker
                   value={field.fontFamily}
-                  onChange={(e) => onUpdate({ ...field, fontFamily: e.target.value })}
-                  className="h-7 text-xs w-full rounded border border-input px-2"
-                  style={{ fontFamily: field.fontFamily }}
-                  placeholder="폰트 이름..."
-                  spellCheck={false}
+                  onChange={(v) => onUpdate({ ...field, fontFamily: v })}
+                  listId={`fontlist-${field.id}`}
+                  fonts={fonts}
                 />
-                <datalist id={`fontlist-${field.id}`}>
-                  {fonts.map((f) => (
-                    <option key={f} value={f} />
-                  ))}
-                </datalist>
               </div>
             </div>
 
@@ -86,7 +122,17 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }
                 onValueChange={([v]) => onUpdate({ ...field, fontSize: v })}
                 className="flex-1"
               />
-              <span className="text-xs w-8 text-right tabular-nums">{field.fontSize}px</span>
+              <input
+                type="number"
+                min={8}
+                max={150}
+                value={field.fontSize}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10)
+                  if (!isNaN(v)) onUpdate({ ...field, fontSize: Math.min(150, Math.max(8, v)) })
+                }}
+                className="h-6 w-14 text-xs border border-input rounded px-1 text-right tabular-nums"
+              />
             </div>
 
             {/* Style + align + color */}

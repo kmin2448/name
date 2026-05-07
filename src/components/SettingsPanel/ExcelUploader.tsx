@@ -23,6 +23,16 @@ export function ExcelUploader({ fields, rowCount, onParsed }: Props) {
     const ws = XLSX.utils.aoa_to_sheet([headers])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '명패목록')
+
+    // 서식 시트: 현재 텍스트 항목 설정 저장
+    const formatHeaders = ['항목명', '폰트크기', '굵기', '폰트', '정렬', 'X위치', 'Y위치', '너비', '높이', '색상']
+    const formatRows = fields.map((f) => [
+      f.label, f.fontSize, f.fontWeight, f.fontFamily, f.textAlign,
+      f.positionX, f.positionY, f.widthPct, f.heightPct, f.color,
+    ])
+    const formatWs = XLSX.utils.aoa_to_sheet([formatHeaders, ...formatRows])
+    XLSX.utils.book_append_sheet(wb, formatWs, '서식')
+
     XLSX.writeFile(wb, '명패_양식.xlsx')
   }
 

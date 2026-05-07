@@ -22,6 +22,7 @@ export default function Home() {
     state,
     setSize,
     setBackground,
+    setFields,
     addField,
     addFieldWithLabel,
     updateField,
@@ -41,12 +42,16 @@ export default function Home() {
   const scale = baseScale * zoom
 
   const handleExcelParsed = (result: ExcelParseResult) => {
+    // Apply saved field configs from 서식 sheet if present
+    if (result.fieldConfigs && result.fieldConfigs.length > 0) {
+      setFields(result.fieldConfigs)
+    }
     setExcelRows(result.rows)
     if (result.rows.length > 0) {
       setPreviewData(result.rows[0])
       setSelectedRowIndex(0)
     }
-    // Auto-add text fields for Excel columns that don't have a field yet
+    // Auto-add Excel columns not covered by field configs
     result.newColumns.forEach((col) => addFieldWithLabel(col))
   }
 

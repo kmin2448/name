@@ -17,7 +17,7 @@ export function useLocalFonts(): string[] {
     window.queryLocalFonts()
       .then((localFonts) => {
         const families = [...new Set(localFonts.map((f) => f.family))].sort()
-        setFonts(families)
+        if (families.length > 0) setFonts(families)
       })
       .catch(() => {
         // Permission denied — keep fallback list
