@@ -1,11 +1,13 @@
 'use client'
 import { useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { TextFieldConfig, ExcelParseResult } from '@/types/nameplate'
 import { parseExcelFile } from '@/lib/excelParser'
 import { toast } from 'sonner'
+import { Download } from 'lucide-react'
 
 type Props = {
   fields: TextFieldConfig[]
@@ -15,6 +17,14 @@ type Props = {
 
 export function ExcelUploader({ fields, rowCount, onParsed }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const downloadTemplate = () => {
+    const headers = fields.map((f) => f.label)
+    const ws = XLSX.utils.aoa_to_sheet([headers])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '명패목록')
+    XLSX.writeFile(wb, '명패_양식.xlsx')
+  }
 
   const handleFile = async (file: File) => {
     try {
@@ -43,6 +53,10 @@ export function ExcelUploader({ fields, rowCount, onParsed }: Props) {
   return (
     <div className="space-y-2">
       <Label className="text-sm font-semibold">엑셀 업로드</Label>
+      <Button variant="outline" className="w-full text-sm" onClick={downloadTemplate}>
+        <Download className="w-3 h-3 mr-1" />
+        양식 다운로드
+      </Button>
       <div className="flex items-center gap-2">
         <Button variant="outline" className="flex-1 text-sm" onClick={() => inputRef.current?.click()}>
           {rowCount > 0 ? '파일 변경' : '엑셀 파일 선택'}
@@ -52,7 +66,7 @@ export function ExcelUploader({ fields, rowCount, onParsed }: Props) {
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        첫 행에 헤더(프로그램명, 소속, 이름, 직책 등) | .xlsx, .csv
+        양식을 다운받아 작성 후 업로드하세요 | .xlsx, .csv
       </p>
       <input
         ref={inputRef}

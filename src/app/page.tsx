@@ -83,6 +83,20 @@ export default function Home() {
                 미리보기: 첫 번째 행 데이터 · 총 {state.excelRows.length}명
               </p>
             )}
+
+            {/* 인쇄 안내 */}
+            <div className="mt-6 w-full max-w-md rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              <p className="font-semibold mb-1">🖨️ PDF 인쇄 방법</p>
+              <ul className="space-y-0.5 text-xs list-disc list-inside">
+                <li>배율: <strong>실제 크기(100%)</strong> 또는 <strong>맞춤 페이지 없음</strong> 선택</li>
+                <li>여백: <strong>없음</strong> 또는 최소로 설정</li>
+                <li>용지 크기: <strong>A4</strong></li>
+                <li>단면 인쇄 후 접어서 사용하세요</li>
+              </ul>
+            </div>
+
+            {/* 저작권 */}
+            <p className="mt-6 text-xs text-muted-foreground">© min2448</p>
           </main>
         </div>
       </div>

@@ -55,7 +55,7 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }
               <span className="text-xs text-muted-foreground w-10 shrink-0">크기</span>
               <Slider
                 min={8}
-                max={72}
+                max={100}
                 step={1}
                 value={[field.fontSize]}
                 onValueChange={([v]) => onUpdate({ ...field, fontSize: v })}
