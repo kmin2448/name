@@ -9,13 +9,21 @@ import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 import { ExportButton } from '@/components/ExportButton'
-import { ExcelParseResult } from '@/types/nameplate'
+import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 
 const PREVIEW_MAX_WIDTH = 460
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 3
+
+function getEffectiveFields(
+  globalFields: TextFieldConfig[],
+  overrides?: Record<string, TextFieldConfig>
+): TextFieldConfig[] {
+  if (!overrides) return globalFields
+  return globalFields.map((f) => overrides[f.id] ?? f)
+}
 
 export default function Home() {
   const {
@@ -32,6 +40,9 @@ export default function Home() {
     setPreviewData,
     setExcelRows,
     updateExcelRow,
+    setFieldOverrideForPage,
+    moveFieldForPage,
+    resizeFieldForPage,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -42,8 +53,17 @@ export default function Home() {
   const baseScale = Math.min(1, PREVIEW_MAX_WIDTH / (state.size.widthMm * MM_TO_PX))
   const scale = baseScale * zoom
 
+  const effectiveFields = getEffectiveFields(
+    state.fields,
+    selectedRowIndex >= 0 ? state.pageFieldOverrides[selectedRowIndex] : undefined
+  )
+
+  const hasPageOverride =
+    selectedRowIndex >= 0 &&
+    !!state.pageFieldOverrides[selectedRowIndex] &&
+    Object.keys(state.pageFieldOverrides[selectedRowIndex]).length > 0
+
   const handleExcelParsed = (result: ExcelParseResult) => {
-    // Apply saved field configs from 서식 sheet if present
     if (result.fieldConfigs && result.fieldConfigs.length > 0) {
       setFields(result.fieldConfigs)
     }
@@ -52,7 +72,6 @@ export default function Home() {
       setPreviewData(result.rows[0])
       setSelectedRowIndex(0)
     }
-    // Auto-add Excel columns not covered by field configs
     result.newColumns.forEach((col) => addFieldWithLabel(col))
   }
 
@@ -71,6 +90,35 @@ export default function Home() {
       const updated = { ...state.excelRows[selectedRowIndex], [fieldLabel]: value }
       updateExcelRow(selectedRowIndex, updated)
       setPreviewData(updated)
+    }
+  }
+
+  // Field style update: label changes always go global; style changes route by applyToAll
+  const handleUpdateField = (field: TextFieldConfig) => {
+    const globalField = state.fields.find((f) => f.id === field.id)
+    const labelChanged = globalField?.label !== field.label
+    if (!applyToAll && selectedRowIndex >= 0 && !labelChanged) {
+      setFieldOverrideForPage(selectedRowIndex, field)
+      // Keep previewData in sync with updated effective fields
+      setPreviewData({ ...state.previewData })
+    } else {
+      updateField(field)
+    }
+  }
+
+  const handleMoveField = (id: string, positionX: number, positionY: number) => {
+    if (!applyToAll && selectedRowIndex >= 0) {
+      moveFieldForPage(selectedRowIndex, id, positionX, positionY)
+    } else {
+      moveField(id, positionX, positionY)
+    }
+  }
+
+  const handleResizeField = (id: string, widthPct: number, heightPct: number) => {
+    if (!applyToAll && selectedRowIndex >= 0) {
+      resizeFieldForPage(selectedRowIndex, id, widthPct, heightPct)
+    } else {
+      resizeField(id, widthPct, heightPct)
     }
   }
 
@@ -93,10 +141,17 @@ export default function Home() {
             <hr />
             <BackgroundUploader value={state.backgroundImage} onChange={setBackground} />
             <hr />
+            {/* 적용 범위 표시 */}
+            {selectedRowIndex >= 0 && state.excelRows.length > 0 && (
+              <div className={`text-xs rounded px-2 py-1.5 flex items-center gap-1.5 ${applyToAll ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-[#1F5C99]'}`}>
+                <span className="font-semibold">{applyToAll ? '전체 적용 모드' : '이 페이지만 모드'}</span>
+                <span className="text-[10px] opacity-70">— 아래 편집이 {applyToAll ? '전체' : `${selectedRowIndex + 1}번`} 페이지에 적용됨</span>
+              </div>
+            )}
             <TextFieldEditor
-              fields={state.fields}
+              fields={effectiveFields}
               focusedId={focusedFieldId}
-              onUpdate={updateField}
+              onUpdate={handleUpdateField}
               onRemove={removeField}
               onAdd={addField}
             />
@@ -141,14 +196,20 @@ export default function Home() {
               >
                 <RotateCcw className="w-3 h-3" />
               </button>
+              {hasPageOverride && !applyToAll && (
+                <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
+                  커스텀 적용 중
+                </span>
+              )}
             </div>
 
             <NameplateCanvas
               state={state}
+              overrideFields={effectiveFields}
               scale={scale}
               focusedFieldId={focusedFieldId}
-              onMove={moveField}
-              onResize={resizeField}
+              onMove={handleMoveField}
+              onResize={handleResizeField}
               onFieldFocus={setFocusedFieldId}
             />
 
@@ -179,6 +240,11 @@ export default function Home() {
                     ⚠ 입력한 내용이 전체 {state.excelRows.length}개 페이지에 동일하게 적용됩니다
                   </p>
                 )}
+                {!applyToAll && (
+                  <p className="text-xs text-[#1F5C99] mb-2">
+                    데이터 수정 · 텍스트 위치/크기/색상/정렬 변경이 이 페이지에만 적용됩니다
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                   {state.fields.map((field) => (
                     <div key={field.id} className="flex items-center gap-1.5">
@@ -198,6 +264,7 @@ export default function Home() {
             <PageThumbnails
               rows={state.excelRows}
               fields={state.fields}
+              pageFieldOverrides={state.pageFieldOverrides}
               size={state.size}
               backgroundImage={state.backgroundImage}
               selectedIndex={selectedRowIndex}

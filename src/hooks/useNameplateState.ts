@@ -16,6 +16,9 @@ type Action =
   | { type: 'SET_PREVIEW_DATA'; payload: Record<string, string> }
   | { type: 'SET_EXCEL_ROWS'; payload: Record<string, string>[] }
   | { type: 'UPDATE_EXCEL_ROW'; payload: { index: number; data: Record<string, string> } }
+  | { type: 'SET_FIELD_OVERRIDE_FOR_PAGE'; payload: { pageIndex: number; field: TextFieldConfig } }
+  | { type: 'MOVE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; positionX: number; positionY: number } }
+  | { type: 'RESIZE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; widthPct: number; heightPct: number } }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -95,6 +98,53 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       rows[action.payload.index] = action.payload.data
       return { ...state, excelRows: rows }
     }
+    case 'SET_FIELD_OVERRIDE_FOR_PAGE': {
+      const { pageIndex, field } = action.payload
+      const existing = state.pageFieldOverrides[pageIndex] ?? {}
+      return {
+        ...state,
+        pageFieldOverrides: {
+          ...state.pageFieldOverrides,
+          [pageIndex]: { ...existing, [field.id]: field },
+        },
+      }
+    }
+    case 'MOVE_FIELD_FOR_PAGE': {
+      const { pageIndex, id, positionX, positionY } = action.payload
+      const existing = state.pageFieldOverrides[pageIndex] ?? {}
+      const base = existing[id] ?? state.fields.find((f) => f.id === id)
+      if (!base) return state
+      const updated: TextFieldConfig = {
+        ...base,
+        positionX: clamp(positionX, 0, 100 - base.widthPct),
+        positionY: clamp(positionY, 0, 100 - base.heightPct),
+      }
+      return {
+        ...state,
+        pageFieldOverrides: {
+          ...state.pageFieldOverrides,
+          [pageIndex]: { ...existing, [id]: updated },
+        },
+      }
+    }
+    case 'RESIZE_FIELD_FOR_PAGE': {
+      const { pageIndex, id, widthPct, heightPct } = action.payload
+      const existing = state.pageFieldOverrides[pageIndex] ?? {}
+      const base = existing[id] ?? state.fields.find((f) => f.id === id)
+      if (!base) return state
+      const updated: TextFieldConfig = {
+        ...base,
+        widthPct: clamp(widthPct, 5, 100 - base.positionX),
+        heightPct: clamp(heightPct, 5, 100 - base.positionY),
+      }
+      return {
+        ...state,
+        pageFieldOverrides: {
+          ...state.pageFieldOverrides,
+          [pageIndex]: { ...existing, [id]: updated },
+        },
+      }
+    }
     default:
       return state
   }
@@ -104,6 +154,7 @@ export const initialState: NameplateState = {
   size: DEFAULT_SIZE,
   backgroundImage: null,
   fields: DEFAULT_FIELDS,
+  pageFieldOverrides: {},
   previewData: SAMPLE_PREVIEW_DATA,
   excelRows: [],
 }
@@ -135,10 +186,26 @@ export function useNameplateState() {
       dispatch({ type: 'UPDATE_EXCEL_ROW', payload: { index, data } }),
     []
   )
+  const setFieldOverrideForPage = useCallback(
+    (pageIndex: number, field: TextFieldConfig) =>
+      dispatch({ type: 'SET_FIELD_OVERRIDE_FOR_PAGE', payload: { pageIndex, field } }),
+    []
+  )
+  const moveFieldForPage = useCallback(
+    (pageIndex: number, id: string, positionX: number, positionY: number) =>
+      dispatch({ type: 'MOVE_FIELD_FOR_PAGE', payload: { pageIndex, id, positionX, positionY } }),
+    []
+  )
+  const resizeFieldForPage = useCallback(
+    (pageIndex: number, id: string, widthPct: number, heightPct: number) =>
+      dispatch({ type: 'RESIZE_FIELD_FOR_PAGE', payload: { pageIndex, id, widthPct, heightPct } }),
+    []
+  )
 
   return {
     state, setSize, setBackground, setFields, addField, addFieldWithLabel,
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
+    setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage,
   }
 }

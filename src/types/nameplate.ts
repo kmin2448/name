@@ -23,6 +23,7 @@ export type NameplateState = {
   size: NameplateSize
   backgroundImage: string | null
   fields: TextFieldConfig[]
+  pageFieldOverrides: Record<number, Record<string, TextFieldConfig>>
   previewData: Record<string, string>
   excelRows: Record<string, string>[]
 }

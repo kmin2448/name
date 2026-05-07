@@ -10,10 +10,19 @@ const MAX_VISIBLE = 300
 type Props = {
   rows: Record<string, string>[]
   fields: TextFieldConfig[]
+  pageFieldOverrides: Record<number, Record<string, TextFieldConfig>>
   size: NameplateSize
   backgroundImage: string | null
   selectedIndex: number
   onSelect: (index: number) => void
+}
+
+function getEffectiveFields(
+  globalFields: TextFieldConfig[],
+  overrides?: Record<string, TextFieldConfig>
+): TextFieldConfig[] {
+  if (!overrides) return globalFields
+  return globalFields.map((f) => overrides[f.id] ?? f)
 }
 
 function getLabel(row: Record<string, string>, fields: TextFieldConfig[]): string {
@@ -94,7 +103,7 @@ function ThumbnailFace({
   )
 }
 
-export function PageThumbnails({ rows, fields, size, backgroundImage, selectedIndex, onSelect }: Props) {
+export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgroundImage, selectedIndex, onSelect }: Props) {
   if (rows.length === 0) return null
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -128,25 +137,32 @@ export function PageThumbnails({ rows, fields, size, backgroundImage, selectedIn
             gap: GAP,
           }}
         >
-          {visible.map((row, i) => (
-            <div
-              key={i}
-              onClick={() => onSelect(i)}
-              className="cursor-pointer rounded overflow-hidden transition-all"
-              style={{
-                outline: selectedIndex === i ? '2.5px solid #1F5C99' : '1.5px solid #e5e7eb',
-                outlineOffset: 1,
-              }}
-            >
-              <ThumbnailFace row={row} fields={fields} size={size} backgroundImage={backgroundImage} thumbWidth={thumbWidth} />
+          {visible.map((row, i) => {
+            const effectiveFields = getEffectiveFields(fields, pageFieldOverrides[i])
+            const hasOverride = !!pageFieldOverrides[i] && Object.keys(pageFieldOverrides[i]).length > 0
+            return (
               <div
-                className="text-center bg-white border-t border-gray-100 text-gray-500"
-                style={{ fontSize: 9, padding: '2px 4px', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                key={i}
+                onClick={() => onSelect(i)}
+                className="cursor-pointer rounded overflow-hidden transition-all"
+                style={{
+                  outline: selectedIndex === i ? '2.5px solid #1F5C99' : '1.5px solid #e5e7eb',
+                  outlineOffset: 1,
+                }}
               >
-                {i + 1}. {getLabel(row, fields)}
+                <ThumbnailFace row={row} fields={effectiveFields} size={size} backgroundImage={backgroundImage} thumbWidth={thumbWidth} />
+                <div
+                  className="text-center bg-white border-t border-gray-100 text-gray-500 flex items-center justify-center gap-1"
+                  style={{ fontSize: 9, padding: '2px 4px', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                >
+                  {hasOverride && (
+                    <span style={{ fontSize: 8, background: '#f97316', color: '#fff', borderRadius: 2, padding: '0 2px', lineHeight: 1.6, flexShrink: 0 }}>커스텀</span>
+                  )}
+                  {i + 1}. {getLabel(row, effectiveFields)}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           {overflow > 0 && (
             <div className="flex items-center justify-center text-xs text-gray-400 py-4">
               +{overflow}명

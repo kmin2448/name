@@ -182,6 +182,7 @@ export function renderStaticFields(fields: TextFieldConfig[], data: Record<strin
 
 type Props = {
   state: NameplateState
+  overrideFields?: TextFieldConfig[]
   scale: number
   focusedFieldId: string | null
   onMove: (id: string, positionX: number, positionY: number) => void
@@ -189,12 +190,13 @@ type Props = {
   onFieldFocus: (id: string) => void
 }
 
-export function NameplateCanvas({ state, scale, focusedFieldId, onMove, onResize, onFieldFocus }: Props) {
+export function NameplateCanvas({ state, overrideFields, scale, focusedFieldId, onMove, onResize, onFieldFocus }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showRuler, setShowRuler] = useState(false)
   const [guides, setGuides] = useState<GuideLine[]>([])
 
-  const { size, backgroundImage, fields, previewData } = state
+  const { size, backgroundImage, previewData } = state
+  const fields = overrideFields ?? state.fields
   const widthPx = size.widthMm * MM_TO_PX
   const heightPx = size.heightMm * MM_TO_PX
   const scaledWidth = Math.round(widthPx * scale)

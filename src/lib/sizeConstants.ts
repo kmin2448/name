@@ -31,7 +31,7 @@ export const DEFAULT_FIELDS: TextFieldConfig[] = [
     fontSize: 42,
     fontWeight: 'normal',
     fontFamily: '맑은 고딕',
-    textAlign: 'left',
+    textAlign: 'center',
     positionX: 23,
     positionY: 36,
     widthPct: 55,
