@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Toaster } from 'sonner'
 import { useNameplateState } from '@/hooks/useNameplateState'
 import { SizeSelector } from '@/components/SettingsPanel/SizeSelector'
-import { BackgroundUploader } from '@/components/SettingsPanel/BackgroundUploader'
+import { ImagePanel } from '@/components/SettingsPanel/ImagePanel'
 import { TextFieldEditor } from '@/components/SettingsPanel/TextFieldEditor'
 import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
@@ -30,6 +30,9 @@ export default function Home() {
     state,
     setSize,
     setBackground,
+    addOverlayImage,
+    updateOverlayImage,
+    removeOverlayImage,
     setFields,
     addField,
     addFieldWithLabel,
@@ -141,7 +144,16 @@ export default function Home() {
           <aside className="w-72 border-r overflow-y-auto p-4 space-y-5 shrink-0 bg-white">
             <SizeSelector value={state.size} onChange={setSize} />
             <hr />
-            <BackgroundUploader value={state.backgroundImage} onChange={setBackground} />
+            <ImagePanel
+              backgroundImage={state.backgroundImage}
+              onBackgroundChange={setBackground}
+              overlayImages={state.overlayImages}
+              fields={state.fields}
+              excelRows={state.excelRows}
+              onAddOverlay={addOverlayImage}
+              onUpdateOverlay={updateOverlayImage}
+              onRemoveOverlay={removeOverlayImage}
+            />
             <hr />
             {/* 적용 범위 표시 */}
             {selectedRowIndex >= 0 && state.excelRows.length > 0 && (
@@ -275,6 +287,7 @@ export default function Home() {
               pageFieldOverrides={state.pageFieldOverrides}
               size={state.size}
               backgroundImage={state.backgroundImage}
+              overlayImages={state.overlayImages}
               selectedIndex={selectedRowIndex}
               onSelect={handleThumbnailSelect}
             />

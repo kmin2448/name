@@ -1,7 +1,8 @@
 'use client'
 import { useRef, useState, useEffect } from 'react'
-import { TextFieldConfig, NameplateSize } from '@/types/nameplate'
+import { TextFieldConfig, NameplateSize, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
+import { renderOverlayImages } from '@/components/NameplatePreview/NameplateCanvas'
 
 const COLS = 4
 const GAP = 8
@@ -13,6 +14,7 @@ type Props = {
   pageFieldOverrides: Record<number, Record<string, TextFieldConfig>>
   size: NameplateSize
   backgroundImage: string | null
+  overlayImages: OverlayImage[]
   selectedIndex: number
   onSelect: (index: number) => void
 }
@@ -39,12 +41,14 @@ function ThumbnailFace({
   fields,
   size,
   backgroundImage,
+  overlayImages,
   thumbWidth,
 }: {
   row: Record<string, string>
   fields: TextFieldConfig[]
   size: NameplateSize
   backgroundImage: string | null
+  overlayImages: OverlayImage[]
   thumbWidth: number
 }) {
   const widthPx = size.widthMm * MM_TO_PX
@@ -62,6 +66,7 @@ function ThumbnailFace({
   return (
     <div style={{ width: thumbWidth, height: thumbH, position: 'relative', overflow: 'hidden', ...bgStyle }}>
       <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})`, width: widthPx, height: heightPx }}>
+        {renderOverlayImages(overlayImages, row)}
         {fields.map((field) => {
           const justifyContent =
             field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
@@ -103,7 +108,7 @@ function ThumbnailFace({
   )
 }
 
-export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgroundImage, selectedIndex, onSelect }: Props) {
+export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgroundImage, overlayImages, selectedIndex, onSelect }: Props) {
   if (rows.length === 0) return null
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -150,7 +155,7 @@ export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgro
                   outlineOffset: 1,
                 }}
               >
-                <ThumbnailFace row={row} fields={effectiveFields} size={size} backgroundImage={backgroundImage} thumbWidth={thumbWidth} />
+                <ThumbnailFace row={row} fields={effectiveFields} size={size} backgroundImage={backgroundImage} overlayImages={overlayImages} thumbWidth={thumbWidth} />
                 <div
                   className="text-center bg-white border-t border-gray-100 text-gray-500 flex items-center justify-center gap-1"
                   style={{ fontSize: 9, padding: '2px 4px', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}

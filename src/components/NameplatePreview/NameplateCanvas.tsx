@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useState, useCallback } from 'react'
-import { NameplateState, TextFieldConfig } from '@/types/nameplate'
+import { NameplateState, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DraggableTextField } from './DraggableTextField'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { Ruler } from 'lucide-react'
@@ -141,6 +141,31 @@ function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
   )
 }
 
+export function renderOverlayImages(overlayImages: OverlayImage[], rowData: Record<string, string>) {
+  return overlayImages
+    .filter((img) =>
+      img.condition.type === 'all' ||
+      rowData[img.condition.fieldLabel] === img.condition.fieldValue
+    )
+    .map((img) => (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        key={img.id}
+        src={img.src}
+        alt=""
+        style={{
+          position: 'absolute',
+          left: `${img.positionX}%`,
+          top: `${img.positionY}%`,
+          width: `${img.widthPct}%`,
+          height: `${img.heightPct}%`,
+          objectFit: 'contain',
+          pointerEvents: 'none',
+        }}
+      />
+    ))
+}
+
 export function renderStaticFields(fields: TextFieldConfig[], data: Record<string, string>) {
   return fields.map((field) => {
     const justifyContent =
@@ -195,7 +220,7 @@ export function NameplateCanvas({ state, overrideFields, scale, focusedFieldId, 
   const [showRuler, setShowRuler] = useState(false)
   const [guides, setGuides] = useState<GuideLine[]>([])
 
-  const { size, backgroundImage, previewData } = state
+  const { size, backgroundImage, overlayImages, previewData } = state
   const fields = overrideFields ?? state.fields
   const widthPx = size.widthMm * MM_TO_PX
   const heightPx = size.heightMm * MM_TO_PX
@@ -265,9 +290,11 @@ export function NameplateCanvas({ state, overrideFields, scale, focusedFieldId, 
               style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}
             >
               <div style={{ ...halfStyle, transform: 'rotate(180deg)' }}>
+                {renderOverlayImages(overlayImages, previewData)}
                 {renderStaticFields(fields, previewData)}
               </div>
               <div ref={bottomRef} style={halfStyle}>
+                {renderOverlayImages(overlayImages, previewData)}
                 {fields.map((field) => (
                   <DraggableTextField
                     key={field.id}

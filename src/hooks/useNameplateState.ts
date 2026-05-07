@@ -1,11 +1,14 @@
 'use client'
 import { useReducer, useCallback } from 'react'
-import { NameplateState, NameplateSize, TextFieldConfig } from '@/types/nameplate'
+import { NameplateState, NameplateSize, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DEFAULT_SIZE, DEFAULT_FIELDS, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
 
 type Action =
   | { type: 'SET_SIZE'; payload: NameplateSize }
   | { type: 'SET_BACKGROUND'; payload: string | null }
+  | { type: 'ADD_OVERLAY_IMAGE'; payload: OverlayImage }
+  | { type: 'UPDATE_OVERLAY_IMAGE'; payload: OverlayImage }
+  | { type: 'REMOVE_OVERLAY_IMAGE'; payload: string }
   | { type: 'SET_FIELDS'; payload: TextFieldConfig[] }
   | { type: 'ADD_FIELD' }
   | { type: 'ADD_FIELD_WITH_LABEL'; payload: string }
@@ -47,6 +50,12 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       return { ...state, size: action.payload }
     case 'SET_BACKGROUND':
       return { ...state, backgroundImage: action.payload }
+    case 'ADD_OVERLAY_IMAGE':
+      return { ...state, overlayImages: [...state.overlayImages, action.payload] }
+    case 'UPDATE_OVERLAY_IMAGE':
+      return { ...state, overlayImages: state.overlayImages.map((img) => img.id === action.payload.id ? action.payload : img) }
+    case 'REMOVE_OVERLAY_IMAGE':
+      return { ...state, overlayImages: state.overlayImages.filter((img) => img.id !== action.payload) }
     case 'SET_FIELDS':
       return { ...state, fields: action.payload }
     case 'ADD_FIELD': {
@@ -158,6 +167,7 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
 export const initialState: NameplateState = {
   size: DEFAULT_SIZE,
   backgroundImage: null,
+  overlayImages: [],
   fields: DEFAULT_FIELDS,
   pageFieldOverrides: {},
   previewData: SAMPLE_PREVIEW_DATA,
@@ -169,6 +179,9 @@ export function useNameplateState() {
 
   const setSize = useCallback((size: NameplateSize) => dispatch({ type: 'SET_SIZE', payload: size }), [])
   const setBackground = useCallback((bg: string | null) => dispatch({ type: 'SET_BACKGROUND', payload: bg }), [])
+  const addOverlayImage = useCallback((img: OverlayImage) => dispatch({ type: 'ADD_OVERLAY_IMAGE', payload: img }), [])
+  const updateOverlayImage = useCallback((img: OverlayImage) => dispatch({ type: 'UPDATE_OVERLAY_IMAGE', payload: img }), [])
+  const removeOverlayImage = useCallback((id: string) => dispatch({ type: 'REMOVE_OVERLAY_IMAGE', payload: id }), [])
   const setFields = useCallback((fields: TextFieldConfig[]) => dispatch({ type: 'SET_FIELDS', payload: fields }), [])
   const addField = useCallback(() => dispatch({ type: 'ADD_FIELD' }), [])
   const addFieldWithLabel = useCallback((label: string) => dispatch({ type: 'ADD_FIELD_WITH_LABEL', payload: label }), [])
@@ -212,7 +225,8 @@ export function useNameplateState() {
   )
 
   return {
-    state, setSize, setBackground, setFields, addField, addFieldWithLabel,
+    state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
+    setFields, addField, addFieldWithLabel,
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,

@@ -19,9 +19,25 @@ export type TextFieldConfig = {
   color: string
 }
 
+export type ImageCondition =
+  | { type: 'all' }
+  | { type: 'field'; fieldLabel: string; fieldValue: string }
+
+export type OverlayImage = {
+  id: string
+  src: string        // base64 data URL
+  name: string
+  positionX: number  // % from left
+  positionY: number  // % from top
+  widthPct: number   // % of canvas width
+  heightPct: number  // % of canvas height
+  condition: ImageCondition
+}
+
 export type NameplateState = {
   size: NameplateSize
   backgroundImage: string | null
+  overlayImages: OverlayImage[]
   fields: TextFieldConfig[]
   pageFieldOverrides: Record<number, Record<string, TextFieldConfig>>
   previewData: Record<string, string>
