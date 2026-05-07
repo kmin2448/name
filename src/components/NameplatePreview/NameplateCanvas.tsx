@@ -25,8 +25,11 @@ function calcSnap(
   let x = rawX
   let y = rawY
   const guides: GuideLine[] = []
+
   const centerX = rawX + widthPct / 2
   const centerY = rawY + heightPct / 2
+  const dragRight = rawX + widthPct
+  const dragBottom = rawY + heightPct
 
   // Snap center to canvas center
   if (Math.abs(centerX - 50) < SNAP_THRESHOLD) {
@@ -40,32 +43,53 @@ function calcSnap(
 
   for (const field of fields) {
     if (field.id === dragId) continue
-    const otherCenterX = field.positionX + field.widthPct / 2
-    const otherCenterY = field.positionY + field.heightPct / 2
+    const oX = field.positionX
+    const oY = field.positionY
+    const oCX = oX + field.widthPct / 2
+    const oCY = oY + field.heightPct / 2
+    const oR = oX + field.widthPct
+    const oB = oY + field.heightPct
 
-    // Left edge or center-X alignment
-    if (Math.abs(rawX - field.positionX) < SNAP_THRESHOLD) {
-      if (x === rawX) x = field.positionX
-      guides.push({ type: 'vertical', position: field.positionX, isCenter: false })
-    } else if (Math.abs(centerX - otherCenterX) < SNAP_THRESHOLD) {
-      if (x === rawX) x = otherCenterX - widthPct / 2
-      guides.push({ type: 'vertical', position: otherCenterX, isCenter: false })
+    // --- X axis: left edge, center, right edge ---
+    const xCandidates: { snap: number; pos: number; delta: number }[] = [
+      { snap: oX, pos: oX, delta: Math.abs(rawX - oX) },              // left-left
+      { snap: oCX - widthPct / 2, pos: oCX, delta: Math.abs(centerX - oCX) },  // center-center
+      { snap: oR - widthPct, pos: oR, delta: Math.abs(dragRight - oR) }, // right-right
+    ].filter((c) => c.delta < SNAP_THRESHOLD)
+
+    if (xCandidates.length > 0) {
+      const best = xCandidates.reduce((a, b) => (a.delta < b.delta ? a : b))
+      if (x === rawX) x = best.snap
+      guides.push({ type: 'vertical', position: best.pos, isCenter: false })
     }
 
-    // Top edge or center-Y alignment
-    if (Math.abs(rawY - field.positionY) < SNAP_THRESHOLD) {
-      if (y === rawY) y = field.positionY
-      guides.push({ type: 'horizontal', position: field.positionY, isCenter: false })
-    } else if (Math.abs(centerY - otherCenterY) < SNAP_THRESHOLD) {
-      if (y === rawY) y = otherCenterY - heightPct / 2
-      guides.push({ type: 'horizontal', position: otherCenterY, isCenter: false })
+    // --- Y axis: top edge, center, bottom edge ---
+    const yCandidates: { snap: number; pos: number; delta: number }[] = [
+      { snap: oY, pos: oY, delta: Math.abs(rawY - oY) },                     // top-top
+      { snap: oCY - heightPct / 2, pos: oCY, delta: Math.abs(centerY - oCY) }, // center-center
+      { snap: oB - heightPct, pos: oB, delta: Math.abs(dragBottom - oB) },     // bottom-bottom
+    ].filter((c) => c.delta < SNAP_THRESHOLD)
+
+    if (yCandidates.length > 0) {
+      const best = yCandidates.reduce((a, b) => (a.delta < b.delta ? a : b))
+      if (y === rawY) y = best.snap
+      guides.push({ type: 'horizontal', position: best.pos, isCenter: false })
     }
   }
+
+  // Deduplicate guides
+  const seen = new Set<string>()
+  const deduped = guides.filter((g) => {
+    const key = `${g.type}-${g.position}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 
   return {
     x: Math.max(0, Math.min(100 - widthPct, x)),
     y: Math.max(0, Math.min(100 - heightPct, y)),
-    guides,
+    guides: deduped,
   }
 }
 
@@ -117,7 +141,7 @@ function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
   )
 }
 
-function renderStaticFields(fields: TextFieldConfig[], data: Record<string, string>) {
+export function renderStaticFields(fields: TextFieldConfig[], data: Record<string, string>) {
   return fields.map((field) => {
     const justifyContent =
       field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
@@ -223,7 +247,6 @@ export function NameplateCanvas({ state, scale, focusedFieldId, onMove, onResize
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        {/* Left: corner spacer + vertical ruler beside bottom half */}
         {showRuler && (
           <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
             <div style={{ width: RULER_SIZE, height: RULER_SIZE + scaledHeight, background: '#f6f6f6', borderRight: '1px solid #d1d5db' }} />
@@ -234,18 +257,14 @@ export function NameplateCanvas({ state, scale, focusedFieldId, onMove, onResize
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {showRuler && <HRuler totalPx={scaledWidth} totalMm={size.widthMm} />}
 
-          {/* Canvas container */}
           <div style={{ width: scaledWidth, height: scaledHeight * 2, position: 'relative', overflow: 'hidden' }}>
             <div
               id="nameplate-export-container"
               style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}
             >
-              {/* Top half: rotated */}
               <div style={{ ...halfStyle, transform: 'rotate(180deg)' }}>
                 {renderStaticFields(fields, previewData)}
               </div>
-
-              {/* Bottom half: interactive */}
               <div ref={bottomRef} style={halfStyle}>
                 {fields.map((field) => (
                   <DraggableTextField
@@ -263,38 +282,18 @@ export function NameplateCanvas({ state, scale, focusedFieldId, onMove, onResize
               </div>
             </div>
 
-            {/* Guide overlay at scaled coordinates, outside the CSS-scaled container */}
+            {/* Guide overlay */}
             {guides.length > 0 && (
               <div style={{ position: 'absolute', left: 0, top: scaledHeight, width: scaledWidth, height: scaledHeight, pointerEvents: 'none', zIndex: 10 }}>
                 {guides.map((guide, i) =>
                   guide.type === 'vertical' ? (
-                    <div
-                      key={i}
-                      style={{
-                        position: 'absolute',
-                        left: `${guide.position}%`,
-                        top: 0,
-                        bottom: 0,
-                        width: 1,
-                        background: guide.isCenter ? '#ef4444' : '#f97316',
-                      }}
-                    >
+                    <div key={i} style={{ position: 'absolute', left: `${guide.position}%`, top: 0, bottom: 0, width: 1, background: guide.isCenter ? '#ef4444' : '#f97316' }}>
                       <span style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontFamily: 'monospace', color: guide.isCenter ? '#ef4444' : '#ea580c', background: 'rgba(255,255,255,0.88)', padding: '0 2px', borderRadius: 2, whiteSpace: 'nowrap', lineHeight: 1.5 }}>
                         {((guide.position / 100) * size.widthMm).toFixed(1)}
                       </span>
                     </div>
                   ) : (
-                    <div
-                      key={i}
-                      style={{
-                        position: 'absolute',
-                        top: `${guide.position}%`,
-                        left: 0,
-                        right: 0,
-                        height: 1,
-                        background: guide.isCenter ? '#ef4444' : '#f97316',
-                      }}
-                    >
+                    <div key={i} style={{ position: 'absolute', top: `${guide.position}%`, left: 0, right: 0, height: 1, background: guide.isCenter ? '#ef4444' : '#f97316' }}>
                       <span style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontFamily: 'monospace', color: guide.isCenter ? '#ef4444' : '#ea580c', background: 'rgba(255,255,255,0.88)', padding: '0 2px', borderRadius: 2, whiteSpace: 'nowrap', lineHeight: 1.5 }}>
                         {((guide.position / 100) * size.heightMm).toFixed(1)}
                       </span>

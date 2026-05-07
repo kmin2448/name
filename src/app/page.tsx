@@ -7,6 +7,7 @@ import { BackgroundUploader } from '@/components/SettingsPanel/BackgroundUploade
 import { TextFieldEditor } from '@/components/SettingsPanel/TextFieldEditor'
 import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
+import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 import { ExportButton } from '@/components/ExportButton'
 import { ExcelParseResult } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
@@ -22,16 +23,19 @@ export default function Home() {
     setSize,
     setBackground,
     addField,
+    addFieldWithLabel,
     updateField,
     removeField,
     moveField,
     resizeField,
     setPreviewData,
     setExcelRows,
+    updateExcelRow,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
+  const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
 
   const baseScale = Math.min(1, PREVIEW_MAX_WIDTH / (state.size.widthMm * MM_TO_PX))
   const scale = baseScale * zoom
@@ -40,7 +44,22 @@ export default function Home() {
     setExcelRows(result.rows)
     if (result.rows.length > 0) {
       setPreviewData(result.rows[0])
+      setSelectedRowIndex(0)
     }
+    // Auto-add text fields for Excel columns that don't have a field yet
+    result.newColumns.forEach((col) => addFieldWithLabel(col))
+  }
+
+  const handleThumbnailSelect = (index: number) => {
+    setSelectedRowIndex(index)
+    setPreviewData(state.excelRows[index])
+  }
+
+  const handleRowFieldChange = (fieldLabel: string, value: string) => {
+    if (selectedRowIndex < 0) return
+    const updated = { ...state.excelRows[selectedRowIndex], [fieldLabel]: value }
+    updateExcelRow(selectedRowIndex, updated)
+    setPreviewData(updated)
   }
 
   const handleZoomIn = () => setZoom((v) => Math.min(MAX_ZOOM, parseFloat((v + 0.1).toFixed(1))))
@@ -80,7 +99,6 @@ export default function Home() {
 
           {/* 우측 미리보기 패널 */}
           <main className="flex-1 overflow-auto p-6 bg-gray-50 flex flex-col items-center">
-            {/* 안내 문구 */}
             <p className="text-xs text-muted-foreground mb-3">
               하단 명패에서 텍스트 박스를 드래그해 이동 · 우하단 핸들로 크기 조절
             </p>
@@ -122,11 +140,36 @@ export default function Home() {
               onFieldFocus={setFocusedFieldId}
             />
 
-            {state.excelRows.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-3">
-                미리보기: 첫 번째 행 데이터 · 총 {state.excelRows.length}명
-              </p>
+            {/* 선택된 페이지 데이터 인라인 편집 */}
+            {selectedRowIndex >= 0 && state.excelRows.length > 0 && (
+              <div className="mt-4 w-full max-w-lg bg-white border border-gray-200 rounded-lg px-4 py-3">
+                <p className="text-xs font-semibold text-gray-600 mb-2">
+                  {selectedRowIndex + 1}번 데이터 편집 (총 {state.excelRows.length}명)
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {state.fields.map((field) => (
+                    <div key={field.id} className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-500 whitespace-nowrap">{field.label}</span>
+                      <input
+                        className="h-6 text-xs border border-gray-200 rounded px-1.5 w-28 focus:outline-none focus:border-[#1F5C99]"
+                        value={state.excelRows[selectedRowIndex]?.[field.label] ?? ''}
+                        onChange={(e) => handleRowFieldChange(field.label, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
+
+            {/* 페이지 썸네일 */}
+            <PageThumbnails
+              rows={state.excelRows}
+              fields={state.fields}
+              size={state.size}
+              backgroundImage={state.backgroundImage}
+              selectedIndex={selectedRowIndex}
+              onSelect={handleThumbnailSelect}
+            />
 
             {/* 인쇄 안내 */}
             <div className="mt-6 w-full max-w-md px-2 py-2 text-sm text-gray-500">
@@ -139,7 +182,6 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* 저작권 */}
             <p className="mt-6 text-xs text-muted-foreground">© min2448</p>
           </main>
         </div>

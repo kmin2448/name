@@ -8,18 +8,18 @@ export function normalizeHeader(header: string): string {
 export function matchHeaders(
   headers: string[],
   fieldLabels: string[]
-): { matched: string[]; unmatched: string[] } {
-  const normalizedLabels = fieldLabels.map(normalizeHeader)
-  const matched: string[] = []
-  const unmatched: string[] = []
-  for (const header of headers) {
-    if (normalizedLabels.includes(normalizeHeader(header))) {
-      matched.push(header)
-    } else {
-      unmatched.push(header)
-    }
-  }
-  return { matched, unmatched }
+): { matched: string[]; unmatched: string[]; newColumns: string[] } {
+  const normHeaders = headers.map((h) => normalizeHeader(h))
+  const normLabels = fieldLabels.map((l) => normalizeHeader(l))
+
+  // Field labels that have a matching Excel column
+  const matched = fieldLabels.filter((l) => normHeaders.includes(normalizeHeader(l)))
+  // Field labels without a matching Excel column (will render empty)
+  const unmatched = fieldLabels.filter((l) => !normHeaders.includes(normalizeHeader(l)))
+  // Excel columns that don't correspond to any existing field (auto-add candidates)
+  const newColumns = headers.filter((h) => !normLabels.includes(normalizeHeader(h)))
+
+  return { matched, unmatched, newColumns }
 }
 
 export function parseExcelFile(
@@ -40,13 +40,13 @@ export function parseExcelFile(
         })
 
         if (jsonData.length === 0) {
-          resolve({ rows: [], matched: [], unmatched: [] })
+          resolve({ rows: [], matched: [], unmatched: [], newColumns: [] })
           return
         }
 
         const headers = Object.keys(jsonData[0])
-        const { matched, unmatched } = matchHeaders(headers, fieldLabels)
-        resolve({ rows: jsonData, matched, unmatched })
+        const { matched, unmatched, newColumns } = matchHeaders(headers, fieldLabels)
+        resolve({ rows: jsonData, matched, unmatched, newColumns })
       } catch (err) {
         reject(err)
       }

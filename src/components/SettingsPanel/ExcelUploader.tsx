@@ -38,10 +38,16 @@ export function ExcelUploader({ fields, rowCount, onParsed }: Props) {
 
       onParsed(result)
 
-      if (result.unmatched.length > 0) {
-        result.unmatched.forEach((col) => {
-          toast.warning(`'${col}' 열을 찾지 못했습니다. 빈 값으로 표시됩니다.`)
-        })
+      // Warn about field labels not found in Excel
+      result.unmatched.forEach((label) => {
+        toast.warning(`'${label}' 항목에 해당하는 열이 없습니다.`)
+      })
+
+      // Success — mention auto-added columns if any
+      if (result.newColumns.length > 0) {
+        toast.success(
+          `${result.rows.length}명 로드 완료 · 새 항목 자동 추가: ${result.newColumns.join(', ')}`
+        )
       } else {
         toast.success(`${result.rows.length}명의 데이터를 불러왔습니다.`)
       }
@@ -66,7 +72,7 @@ export function ExcelUploader({ fields, rowCount, onParsed }: Props) {
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        양식을 다운받아 작성 후 업로드하세요 | .xlsx, .csv
+        양식 다운로드 후 작성 · 새 열 추가 시 항목 자동 생성
       </p>
       <input
         ref={inputRef}

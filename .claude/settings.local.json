@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(npx create-next-app@14 . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npm install *)",
+      "Bash(npx shadcn@latest add button card input label select slider toggle toggle-group badge sonner --yes)",
+      "Bash(npm run *)",
+      "Bash(node -e \"require\\('fs'\\).writeFileSync\\('next-env.d.ts', '/// <reference types=\\\\\"next\\\\\" />\\\\n/// <reference types=\\\\\"next/image-types/global\\\\\" />\\\\n'\\)\")",
+      "Bash(node -e \"require\\('fs'\\).writeFileSync\\('src/types/global.d.ts', 'declare module \\\\\"*.css\\\\\" {\\\\n  const styles: Record<string, string>\\\\n  export default styles\\\\n}\\\\n'\\)\")",
+      "Bash(echo \"node_modules\")",
+      "Bash(echo \".next\")",
+      "Bash(echo \".env.local\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "Bash(git push *)",
+      "Bash(npm test *)",
+      "Bash(npx jest *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(Invoke-WebRequest -Uri \"http://localhost:3000\" -UseBasicParsing -TimeoutSec 5)",
+      "Bash(Select-Object -ExpandProperty StatusCode)",
+      "PowerShell(Start-Sleep -Seconds 6; try { \\(Invoke-WebRequest -Uri \"http://localhost:3000\" -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"not ready yet: $_\" })",
+      "Bash(vercel *)",
+      "PowerShell(vercel *)"
+    ]
+  }
+}
