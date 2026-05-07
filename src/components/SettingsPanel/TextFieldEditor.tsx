@@ -11,6 +11,30 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus } from 'lucide-react'
 import { useLocalFonts } from '@/hooks/useLocalFonts'
 
+function FontSizeInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <input
+      type="number"
+      min={8}
+      max={150}
+      value={draft !== null ? draft : String(value)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft !== null) {
+          const v = parseInt(draft, 10)
+          if (!isNaN(v)) onChange(Math.min(150, Math.max(8, v)))
+          setDraft(null)
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+      }}
+      className="h-6 w-14 text-xs border border-input rounded px-1 text-right tabular-nums"
+    />
+  )
+}
+
 // 포커스 시 입력을 초기화해서 datalist가 모든 폰트를 표시하도록 함
 function FontPicker({
   value,
@@ -122,16 +146,9 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }
                 onValueChange={([v]) => onUpdate({ ...field, fontSize: v })}
                 className="flex-1"
               />
-              <input
-                type="number"
-                min={8}
-                max={150}
+              <FontSizeInput
                 value={field.fontSize}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10)
-                  if (!isNaN(v)) onUpdate({ ...field, fontSize: Math.min(150, Math.max(8, v)) })
-                }}
-                className="h-6 w-14 text-xs border border-input rounded px-1 text-right tabular-nums"
+                onChange={(v) => onUpdate({ ...field, fontSize: v })}
               />
             </div>
 

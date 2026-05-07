@@ -19,6 +19,7 @@ type Action =
   | { type: 'SET_FIELD_OVERRIDE_FOR_PAGE'; payload: { pageIndex: number; field: TextFieldConfig } }
   | { type: 'MOVE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; positionX: number; positionY: number } }
   | { type: 'RESIZE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; widthPct: number; heightPct: number } }
+  | { type: 'CLEAR_PAGE_FIELD_OVERRIDE'; payload: number }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -127,6 +128,10 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
         },
       }
     }
+    case 'CLEAR_PAGE_FIELD_OVERRIDE': {
+      const { [action.payload]: _removed, ...rest } = state.pageFieldOverrides
+      return { ...state, pageFieldOverrides: rest }
+    }
     case 'RESIZE_FIELD_FOR_PAGE': {
       const { pageIndex, id, widthPct, heightPct } = action.payload
       const existing = state.pageFieldOverrides[pageIndex] ?? {}
@@ -201,11 +206,15 @@ export function useNameplateState() {
       dispatch({ type: 'RESIZE_FIELD_FOR_PAGE', payload: { pageIndex, id, widthPct, heightPct } }),
     []
   )
+  const clearPageFieldOverride = useCallback(
+    (pageIndex: number) => dispatch({ type: 'CLEAR_PAGE_FIELD_OVERRIDE', payload: pageIndex }),
+    []
+  )
 
   return {
     state, setSize, setBackground, setFields, addField, addFieldWithLabel,
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
-    setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage,
+    setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
   }
 }

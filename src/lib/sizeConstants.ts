@@ -15,7 +15,7 @@ export const DEFAULT_FIELDS: TextFieldConfig[] = [
   {
     id: 'program',
     label: '프로그램명',
-    fontSize: 78,
+    fontSize: 62,
     fontWeight: 'normal',
     fontFamily: '맑은 고딕',
     textAlign: 'center',

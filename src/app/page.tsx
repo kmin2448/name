@@ -43,6 +43,7 @@ export default function Home() {
     setFieldOverrideForPage,
     moveFieldForPage,
     resizeFieldForPage,
+    clearPageFieldOverride,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -130,8 +131,9 @@ export default function Home() {
     <>
       <Toaster position="top-right" richColors />
       <div className="min-h-screen flex flex-col">
-        <header className="bg-[#1F5C99] text-white px-6 py-3 shrink-0">
+        <header className="bg-[#1F5C99] text-white px-6 py-3 shrink-0 flex items-center justify-between">
           <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
+          <span className="text-xs opacity-60">© min2448</span>
         </header>
 
         <div className="flex flex-1 overflow-hidden">
@@ -197,9 +199,15 @@ export default function Home() {
                 <RotateCcw className="w-3 h-3" />
               </button>
               {hasPageOverride && !applyToAll && (
-                <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
-                  커스텀 적용 중
-                </span>
+                <button
+                  onClick={() => {
+                    clearPageFieldOverride(selectedRowIndex)
+                  }}
+                  className="ml-2 text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded hover:bg-orange-200 transition-colors"
+                  title="이 페이지의 커스텀 서식을 제거하고 기본 서식으로 되돌립니다"
+                >
+                  커스텀 취소 ✕
+                </button>
               )}
             </div>
 
@@ -282,7 +290,6 @@ export default function Home() {
               </ul>
             </div>
 
-            <p className="mt-6 text-xs text-muted-foreground">© min2448</p>
           </main>
         </div>
       </div>
