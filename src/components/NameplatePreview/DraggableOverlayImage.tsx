@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { OverlayImage } from '@/types/nameplate'
 
@@ -22,7 +22,13 @@ type Props = {
   isFocused: boolean
   onMove: (id: string, x: number, y: number) => void
   onResize: (id: string, w: number, h: number) => void
-  onCrop: (id: string, cropX: number, cropY: number, cropW: number, cropH: number) => void
+  // positionX/Y and widthPct/heightPct included so left/top drags update in one dispatch
+  onCrop: (
+    id: string,
+    positionX: number, positionY: number,
+    widthPct: number, heightPct: number,
+    cropX: number, cropY: number, cropW: number, cropH: number
+  ) => void
   onFocus: (id: string) => void
   containerRef: React.RefObject<HTMLDivElement>
 }
@@ -43,22 +49,19 @@ export function DraggableOverlayImage({
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => { if (e.key === 'Shift') setIsShifted(true) }
-    const up = (e: KeyboardEvent) => { if (e.key === 'Shift') setIsShifted(false) }
+    const up   = (e: KeyboardEvent) => { if (e.key === 'Shift') setIsShifted(false) }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
   }, [])
 
-  const cropX = image.cropX
-  const cropY = image.cropY
-  const cropW = image.cropW
-  const cropH = image.cropH
+  const { cropX, cropY, cropW, cropH } = image
 
   const captureStart = useCallback((e: React.MouseEvent) => {
     startRef.current = {
       mouseX: e.clientX, mouseY: e.clientY,
       startX: image.positionX, startY: image.positionY,
-      startW: image.widthPct, startH: image.heightPct,
+      startW: image.widthPct,  startH: image.heightPct,
       startCropX: cropX, startCropY: cropY, startCropW: cropW, startCropH: cropH,
     }
   }, [image.positionX, image.positionY, image.widthPct, image.heightPct, cropX, cropY, cropW, cropH])
@@ -79,15 +82,15 @@ export function DraggableOverlayImage({
       const newY = clamp(startRef.current.startY + dy, 0, 100 - startRef.current.startH)
       onMove(image.id, newX, newY)
     }
-    const handleMouseUp = () => {
+    const up = () => {
       document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mouseup', up)
     }
     document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mouseup', up)
   }, [image.id, captureStart, onMove, onFocus, containerRef])
 
-  // ── Corner resize (bottom-right) ──────────────────────────────────────
+  // ── Corner resize (bottom-right, normal mode) ─────────────────────────
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -102,15 +105,19 @@ export function DraggableOverlayImage({
       const newH = clamp(startRef.current.startH + dh, 5, 100 - startRef.current.startY)
       onResize(image.id, newW, newH)
     }
-    const handleMouseUp = () => {
+    const up = () => {
       document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mouseup', up)
     }
     document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mouseup', up)
   }, [image.id, captureStart, onResize, containerRef])
 
   // ── Edge crop (Shift mode) ────────────────────────────────────────────
+  // Logic: keep image scale (scaleX = widthPct / cropW) constant.
+  // Dragging an edge resizes the box; crop values are derived so the
+  // visible image content scrolls/clips naturally — identical to dragging
+  // the edge of a window over a fixed-scale image.
   const handleCropMouseDown = useCallback((edge: CropEdge) => (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -119,50 +126,78 @@ export function DraggableOverlayImage({
     const handleMouseMove = (ev: MouseEvent) => {
       if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
-      // canvas-% delta → image-% delta
-      const dxImg = ((ev.clientX - startRef.current.mouseX) / rect.width) * 100
-                    * startRef.current.startCropW / startRef.current.startW
-      const dyImg = ((ev.clientY - startRef.current.mouseY) / rect.height) * 100
-                    * startRef.current.startCropH / startRef.current.startH
 
-      let { startCropX: cx, startCropY: cy, startCropW: cw, startCropH: ch } = startRef.current
-      let nx = cx, ny = cy, nw = cw, nh = ch
+      const {
+        mouseX, mouseY,
+        startX, startY, startW, startH,
+        startCropX, startCropY, startCropW, startCropH,
+      } = startRef.current
 
-      if (edge === 'left') {
-        nx = clamp(cx + dxImg, 0, cx + cw - 5)
-        nw = cx + cw - nx
-      } else if (edge === 'right') {
-        nw = clamp(cw + dxImg, 5, 100 - cx)
-      } else if (edge === 'top') {
-        ny = clamp(cy + dyImg, 0, cy + ch - 5)
-        nh = cy + ch - ny
-      } else {
-        nh = clamp(ch + dyImg, 5, 100 - cy)
+      const dx = ((ev.clientX - mouseX) / rect.width) * 100
+      const dy = ((ev.clientY - mouseY) / rect.height) * 100
+
+      // canvas% per image% — stays constant during crop
+      const scaleX = startW / startCropW
+      const scaleY = startH / startCropH
+      const MIN_BOX = 3
+
+      let nx = startX, ny = startY, nw = startW, nh = startH
+      let ncx = startCropX, ncy = startCropY, ncw = startCropW, nch = startCropH
+
+      if (edge === 'right') {
+        // Right edge moves; left crop anchor stays
+        const maxW = Math.min((100 - startCropX) * scaleX, 100 - startX)
+        nw  = clamp(startW + dx, MIN_BOX, maxW)
+        ncw = nw / scaleX
+        // ncx unchanged, nx unchanged
+
+      } else if (edge === 'left') {
+        // Left edge moves; right crop anchor stays
+        const maxW = Math.min((startCropX + startCropW) * scaleX, startX + startW)
+        nw  = clamp(startW - dx, MIN_BOX, maxW)
+        nx  = startX + startW - nw        // right box edge fixed
+        ncw = nw / scaleX
+        ncx = startCropX + startCropW - ncw  // right crop edge fixed
+
+      } else if (edge === 'bottom') {
+        // Bottom edge moves; top crop anchor stays
+        const maxH = Math.min((100 - startCropY) * scaleY, 100 - startY)
+        nh  = clamp(startH + dy, MIN_BOX, maxH)
+        nch = nh / scaleY
+        // ncy unchanged, ny unchanged
+
+      } else { // top
+        // Top edge moves; bottom crop anchor stays
+        const maxH = Math.min((startCropY + startCropH) * scaleY, startY + startH)
+        nh  = clamp(startH - dy, MIN_BOX, maxH)
+        ny  = startY + startH - nh        // bottom box edge fixed
+        nch = nh / scaleY
+        ncy = startCropY + startCropH - nch  // bottom crop edge fixed
       }
 
-      onCrop(image.id, nx, ny, nw, nh)
+      onCrop(image.id, nx, ny, nw, nh, ncx, ncy, ncw, nch)
     }
-    const handleMouseUp = () => {
+
+    const up = () => {
       document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mouseup', up)
     }
     document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mouseup', up)
   }, [image.id, captureStart, onCrop, containerRef])
 
   const borderColor = isFocused
     ? isShifted ? '#f97316' : '#475569'
-    : 'rgba(31,92,153,0.18)'
+    : 'rgba(71,85,105,0.18)'
   const borderStyle = isFocused ? '1.5px dashed' : '1px dashed'
 
-  // Crop CSS: image positioned inside overflow:hidden container
   const imgLeft = `${-(cropX / cropW) * 100}%`
   const imgTop  = `${-(cropY / cropH) * 100}%`
   const imgW    = `${(100 / cropW) * 100}%`
   const imgH    = `${(100 / cropH) * 100}%`
 
-  const HANDLE = {
-    position: 'absolute' as const,
+  const HANDLE: React.CSSProperties = {
+    position: 'absolute',
     width: 9, height: 9,
     borderRadius: 2,
     zIndex: 2,
@@ -199,24 +234,18 @@ export function DraggableOverlayImage({
         }}
       />
 
-      {/* ── Normal mode: resize handle ── */}
+      {/* Normal mode: resize handle (bottom-right) */}
       {isFocused && !isShifted && (
         <div
           onMouseDown={handleResizeMouseDown}
-          style={{
-            ...HANDLE,
-            bottom: -4, right: -4,
-            background: '#475569',
-            cursor: 'nwse-resize',
-          }}
+          style={{ ...HANDLE, bottom: -4, right: -4, background: '#475569', cursor: 'nwse-resize' }}
         />
       )}
 
-      {/* ── Shift mode: 4 crop edge handles ── */}
+      {/* Shift / crop mode */}
       {isFocused && isShifted && (
         <>
           <div style={{ position: 'absolute', inset: 0, border: '1.5px dashed #f97316', pointerEvents: 'none' }} />
-          {/* label */}
           <div style={{ position: 'absolute', top: 2, left: 2, fontSize: 9, background: 'rgba(249,115,22,0.88)', color: '#fff', padding: '1px 4px', borderRadius: 2, pointerEvents: 'none', zIndex: 3 }}>
             자르기 모드
           </div>

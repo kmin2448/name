@@ -15,6 +15,12 @@ type GuideLine = {
   isCenter: boolean
 }
 
+type UserGuide = {
+  id: string
+  type: 'horizontal' | 'vertical'
+  position: number
+}
+
 function calcSnap(
   rawX: number,
   rawY: number,
@@ -88,7 +94,7 @@ function calcSnap(
   }
 }
 
-function HRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
+function HRuler({ totalPx, totalMm, onMouseDown }: { totalPx: number; totalMm: number; onMouseDown?: (e: React.MouseEvent<SVGSVGElement>) => void }) {
   const mmPx = totalPx / totalMm
   const ticks: React.ReactNode[] = []
   for (let mm = 0; mm <= totalMm; mm++) {
@@ -103,10 +109,10 @@ function HRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
       </g>
     )
   }
-  return <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', background: '#f6f6f6', borderBottom: '1px solid #d1d5db' }}>{ticks}</svg>
+  return <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', background: '#f6f6f6', borderBottom: '1px solid #d1d5db', cursor: 's-resize' }} onMouseDown={onMouseDown}>{ticks}</svg>
 }
 
-function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
+function VRuler({ totalPx, totalMm, onMouseDown }: { totalPx: number; totalMm: number; onMouseDown?: (e: React.MouseEvent<SVGSVGElement>) => void }) {
   const mmPx = totalPx / totalMm
   const ticks: React.ReactNode[] = []
   for (let mm = 0; mm <= totalMm; mm++) {
@@ -121,7 +127,7 @@ function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
       </g>
     )
   }
-  return <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', background: '#f6f6f6', borderRight: '1px solid #d1d5db' }}>{ticks}</svg>
+  return <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', background: '#f6f6f6', borderRight: '1px solid #d1d5db', cursor: 'e-resize' }} onMouseDown={onMouseDown}>{ticks}</svg>
 }
 
 // ─── Static rendering helpers (used by PageThumbnails and PDF generator) ───
@@ -219,7 +225,7 @@ type Props = {
   onOverlayFocus: (id: string) => void
   onOverlayMove: (id: string, x: number, y: number) => void
   onOverlayResize: (id: string, w: number, h: number) => void
-  onOverlayCrop: (id: string, cropX: number, cropY: number, cropW: number, cropH: number) => void
+  onOverlayCrop: (id: string, positionX: number, positionY: number, widthPct: number, heightPct: number, cropX: number, cropY: number, cropW: number, cropH: number) => void
   onDeselect: () => void
 }
 
@@ -231,8 +237,11 @@ export function NameplateCanvas({
   onDeselect,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const [showRuler, setShowRuler] = useState(false)
   const [guides, setGuides] = useState<GuideLine[]>([])
+  const [rulerGuides, setRulerGuides] = useState<UserGuide[]>([])
+  const [draggingGuide, setDraggingGuide] = useState<{ type: 'horizontal' | 'vertical'; position: number } | null>(null)
 
   const { size, backgroundImage, overlayImages, previewData, layers } = state
   const fields = overrideFields ?? state.fields
@@ -255,6 +264,56 @@ export function NameplateCanvas({
   )
 
   const handleDragEnd = useCallback(() => setGuides([]), [])
+
+  const handleHRulerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const onMove = (ev: MouseEvent) => {
+      if (!canvasWrapperRef.current) return
+      const rect = canvasWrapperRef.current.getBoundingClientRect()
+      const halfH = rect.height / 2
+      const pos = (ev.clientY - rect.top - halfH) / halfH * 100
+      if (pos >= 0 && pos <= 100) setDraggingGuide({ type: 'horizontal', position: pos })
+      else setDraggingGuide(null)
+    }
+    const onUp = (ev: MouseEvent) => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      if (!canvasWrapperRef.current) { setDraggingGuide(null); return }
+      const rect = canvasWrapperRef.current.getBoundingClientRect()
+      const halfH = rect.height / 2
+      const pos = (ev.clientY - rect.top - halfH) / halfH * 100
+      if (pos >= 0 && pos <= 100) {
+        setRulerGuides(prev => [...prev, { id: `rg-${Date.now()}`, type: 'horizontal', position: pos }])
+      }
+      setDraggingGuide(null)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
+
+  const handleVRulerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const onMove = (ev: MouseEvent) => {
+      if (!canvasWrapperRef.current) return
+      const rect = canvasWrapperRef.current.getBoundingClientRect()
+      const pos = (ev.clientX - rect.left) / rect.width * 100
+      if (pos >= 0 && pos <= 100) setDraggingGuide({ type: 'vertical', position: pos })
+      else setDraggingGuide(null)
+    }
+    const onUp = (ev: MouseEvent) => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      if (!canvasWrapperRef.current) { setDraggingGuide(null); return }
+      const rect = canvasWrapperRef.current.getBoundingClientRect()
+      const pos = (ev.clientX - rect.left) / rect.width * 100
+      if (pos >= 0 && pos <= 100) {
+        setRulerGuides(prev => [...prev, { id: `rg-${Date.now()}`, type: 'vertical', position: pos }])
+      }
+      setDraggingGuide(null)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
 
   const bgStyle: React.CSSProperties = {
     backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
@@ -288,14 +347,14 @@ export function NameplateCanvas({
         {showRuler && (
           <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
             <div style={{ width: RULER_SIZE, height: RULER_SIZE + scaledHeight, background: '#f6f6f6', borderRight: '1px solid #d1d5db' }} />
-            <VRuler totalPx={scaledHeight} totalMm={size.heightMm} />
+            <VRuler totalPx={scaledHeight} totalMm={size.heightMm} onMouseDown={handleVRulerMouseDown} />
           </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {showRuler && <HRuler totalPx={scaledWidth} totalMm={size.widthMm} />}
+          {showRuler && <HRuler totalPx={scaledWidth} totalMm={size.widthMm} onMouseDown={handleHRulerMouseDown} />}
 
-          <div style={{ width: scaledWidth, height: scaledHeight * 2, position: 'relative', overflow: 'hidden' }}>
+          <div ref={canvasWrapperRef} style={{ width: scaledWidth, height: scaledHeight * 2, position: 'relative', overflow: 'hidden' }}>
             <div
               id="nameplate-export-container"
               style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}
@@ -348,7 +407,7 @@ export function NameplateCanvas({
               </div>
             </div>
 
-            {/* Guide overlay */}
+            {/* Snap guide overlay (auto-generated during field drag) */}
             {guides.length > 0 && (
               <div style={{ position: 'absolute', left: 0, top: scaledHeight, width: scaledWidth, height: scaledHeight, pointerEvents: 'none', zIndex: 10 }}>
                 {guides.map((guide, i) =>
@@ -364,6 +423,48 @@ export function NameplateCanvas({
                         {((guide.position / 100) * size.heightMm).toFixed(1)}
                       </span>
                     </div>
+                  )
+                )}
+              </div>
+            )}
+
+            {/* Ruler guides overlay — spans full canvas height; double-click to delete */}
+            {(rulerGuides.length > 0 || draggingGuide !== null) && (
+              <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 9 }}>
+                {rulerGuides.flatMap((rg) => {
+                  const isOverlap = guides.some((g) => g.type === rg.type && Math.abs(g.position - rg.position) < 1)
+                  const color = isOverlap ? '#93c5fd' : '#4ade80'
+                  if (rg.type === 'vertical') {
+                    return [
+                      <div
+                        key={rg.id}
+                        style={{ position: 'absolute', left: `${rg.position}%`, top: 0, bottom: 0, width: 1, background: color, pointerEvents: 'auto', cursor: 'pointer' }}
+                        onDoubleClick={() => setRulerGuides((prev) => prev.filter((g) => g.id !== rg.id))}
+                        title="더블클릭으로 삭제"
+                      />,
+                    ]
+                  }
+                  return [
+                    <div
+                      key={`${rg.id}-b`}
+                      style={{ position: 'absolute', top: `${(1 + rg.position / 100) * 50}%`, left: 0, right: 0, height: 1, background: color, pointerEvents: 'auto', cursor: 'pointer' }}
+                      onDoubleClick={() => setRulerGuides((prev) => prev.filter((g) => g.id !== rg.id))}
+                      title="더블클릭으로 삭제"
+                    />,
+                    <div
+                      key={`${rg.id}-t`}
+                      style={{ position: 'absolute', top: `${(1 - rg.position / 100) * 50}%`, left: 0, right: 0, height: 1, background: color, opacity: 0.4, pointerEvents: 'none' }}
+                    />,
+                  ]
+                })}
+                {draggingGuide && (
+                  draggingGuide.type === 'vertical' ? (
+                    <div style={{ position: 'absolute', left: `${draggingGuide.position}%`, top: 0, bottom: 0, width: 1, background: '#4ade80', opacity: 0.75, pointerEvents: 'none' }} />
+                  ) : (
+                    <>
+                      <div style={{ position: 'absolute', top: `${(1 + draggingGuide.position / 100) * 50}%`, left: 0, right: 0, height: 1, background: '#4ade80', opacity: 0.75, pointerEvents: 'none' }} />
+                      <div style={{ position: 'absolute', top: `${(1 - draggingGuide.position / 100) * 50}%`, left: 0, right: 0, height: 1, background: '#4ade80', opacity: 0.35, pointerEvents: 'none' }} />
+                    </>
                   )
                 )}
               </div>

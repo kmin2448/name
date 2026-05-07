@@ -141,9 +141,14 @@ export default function Home() {
     if (img) updateOverlayImage({ ...img, widthPct: w, heightPct: h })
   }, [state.overlayImages, updateOverlayImage])
 
-  const handleOverlayCrop = useCallback((id: string, cropX: number, cropY: number, cropW: number, cropH: number) => {
+  const handleOverlayCrop = useCallback((
+    id: string,
+    positionX: number, positionY: number,
+    widthPct: number, heightPct: number,
+    cropX: number, cropY: number, cropW: number, cropH: number,
+  ) => {
     const img = state.overlayImages.find((o) => o.id === id)
-    if (img) updateOverlayImage({ ...img, cropX, cropY, cropW, cropH })
+    if (img) updateOverlayImage({ ...img, positionX, positionY, widthPct, heightPct, cropX, cropY, cropW, cropH })
   }, [state.overlayImages, updateOverlayImage])
 
   const handleDeselect = useCallback(() => {
@@ -165,7 +170,7 @@ export default function Home() {
           <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-xs opacity-60">© min2448</span>
-            <span className="text-[10px] opacity-40">2026-05-08-v3</span>
+            <span className="text-[10px] opacity-40">2026-05-08-v4</span>
           </div>
         </header>
 
@@ -235,24 +240,6 @@ export default function Home() {
               <button onClick={handleZoomReset} className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50" title="원래 크기">
                 <RotateCcw className="w-3 h-3" />
               </button>
-              <div className="w-px h-4 bg-gray-200 mx-0.5" />
-              <button
-                onClick={() => setShowBorder(!state.showBorder)}
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${state.showBorder ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}
-                title={state.showBorder ? '테두리 숨기기' : '테두리 표시'}
-              >
-                <Square className="w-3 h-3" />
-                테두리
-              </button>
-              {hasPageOverride && !applyToAll && (
-                <button
-                  onClick={() => clearPageFieldOverride(selectedRowIndex)}
-                  className="ml-2 text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded hover:bg-orange-200 transition-colors"
-                  title="이 페이지의 커스텀 서식을 제거하고 기본 서식으로 되돌립니다"
-                >
-                  커스텀 취소 ✕
-                </button>
-              )}
             </div>
 
             <NameplateCanvas
@@ -273,24 +260,43 @@ export default function Home() {
 
             {/* 선택된 페이지 데이터 인라인 편집 */}
             {selectedRowIndex >= 0 && state.excelRows.length > 0 && (
-              <div className={`mt-4 w-full max-w-lg bg-white border rounded-lg px-4 py-3 transition-colors ${applyToAll ? 'border-orange-300' : 'border-gray-200'}`}>
+              <div className={`mt-4 w-full bg-white border rounded-lg px-4 py-3 transition-colors ${applyToAll ? 'border-orange-300' : 'border-gray-200'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-semibold text-gray-600">
                     {selectedRowIndex + 1}번 데이터 편집 (총 {state.excelRows.length}명)
                   </p>
-                  <div className="flex text-xs border border-gray-200 rounded overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    {hasPageOverride && !applyToAll && (
+                      <button
+                        onClick={() => clearPageFieldOverride(selectedRowIndex)}
+                        className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded hover:bg-orange-200 transition-colors"
+                        title="이 페이지의 커스텀 서식을 제거하고 기본 서식으로 되돌립니다"
+                      >
+                        커스텀 취소 ✕
+                      </button>
+                    )}
                     <button
-                      onClick={() => setApplyToAll(false)}
-                      className={`px-2 py-0.5 transition-colors ${!applyToAll ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      onClick={() => setShowBorder(!state.showBorder)}
+                      className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded border transition-colors ${state.showBorder ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                      title={state.showBorder ? '테두리 숨기기' : '테두리 표시'}
                     >
-                      이 페이지만
+                      <Square className="w-3 h-3" />
+                      테두리
                     </button>
-                    <button
-                      onClick={() => setApplyToAll(true)}
-                      className={`px-2 py-0.5 border-l border-gray-200 transition-colors ${applyToAll ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                    >
-                      전체 적용
-                    </button>
+                    <div className="flex text-xs border border-gray-200 rounded overflow-hidden">
+                      <button
+                        onClick={() => setApplyToAll(false)}
+                        className={`px-2 py-0.5 transition-colors ${!applyToAll ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      >
+                        이 페이지만
+                      </button>
+                      <button
+                        onClick={() => setApplyToAll(true)}
+                        className={`px-2 py-0.5 border-l border-gray-200 transition-colors ${applyToAll ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      >
+                        전체 적용
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {applyToAll && <p className="text-xs text-orange-500 mb-2">⚠ 입력한 내용이 전체 {state.excelRows.length}개 페이지에 동일하게 적용됩니다</p>}
