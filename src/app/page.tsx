@@ -9,6 +9,7 @@ import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 import { ExportButton } from '@/components/ExportButton'
+import { HelpPanel } from '@/components/HelpPanel'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
@@ -133,6 +134,7 @@ export default function Home() {
   return (
     <>
       <Toaster position="top-right" richColors />
+      <HelpPanel />
       <div className="min-h-screen flex flex-col">
         <header className="bg-[#1F5C99] text-white px-6 py-3 shrink-0 flex items-center justify-between">
           <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
