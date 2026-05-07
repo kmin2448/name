@@ -55,7 +55,7 @@ export default function Home() {
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
   const [focusedOverlayId, setFocusedOverlayId] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(1.5)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(false)
 
@@ -170,7 +170,7 @@ export default function Home() {
           <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-xs opacity-60">© min2448</span>
-            <span className="text-[10px] opacity-40">2026-05-08-v4</span>
+            <span className="text-[10px] opacity-40">2026-05-08-v5</span>
           </div>
         </header>
 
