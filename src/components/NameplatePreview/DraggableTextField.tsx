@@ -7,10 +7,11 @@ type Props = {
   value: string
   onMove: (id: string, positionX: number, positionY: number) => void
   onFocus: (id: string) => void
+  onDragEnd?: () => void
   containerRef: React.RefObject<HTMLDivElement>
 }
 
-export function DraggableTextField({ field, value, onMove, onFocus, containerRef }: Props) {
+export function DraggableTextField({ field, value, onMove, onFocus, onDragEnd, containerRef }: Props) {
   const isDragging = useRef(false)
   const dragStart = useRef({ mouseX: 0, mouseY: 0, fieldX: 0, fieldY: 0 })
 
@@ -38,6 +39,7 @@ export function DraggableTextField({ field, value, onMove, onFocus, containerRef
 
       const handleMouseUp = () => {
         isDragging.current = false
+        onDragEnd?.()
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
       }
@@ -45,7 +47,7 @@ export function DraggableTextField({ field, value, onMove, onFocus, containerRef
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [field.id, field.positionX, field.positionY, onMove, onFocus, containerRef]
+    [field.id, field.positionX, field.positionY, onMove, onFocus, onDragEnd, containerRef]
   )
 
   return (
