@@ -3,12 +3,11 @@ import { useState } from 'react'
 import { TextFieldConfig } from '@/types/nameplate'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Toggle } from '@/components/ui/toggle'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus } from 'lucide-react'
+import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus, ChevronDown } from 'lucide-react'
 import { useLocalFonts } from '@/hooks/useLocalFonts'
 
 function FontSizeInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -88,18 +87,29 @@ type Props = {
 
 export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }: Props) {
   const fonts = useLocalFonts()
+  const [open, setOpen] = useState(true)
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">텍스트 항목</Label>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 text-left"
+        >
+          <ChevronDown
+            className="w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200"
+            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          />
+          <span className="text-sm font-semibold text-gray-900">텍스트 항목</span>
+        </button>
         <Button size="sm" variant="outline" onClick={onAdd}>
           <Plus className="w-3 h-3 mr-1" />
           추가
         </Button>
       </div>
 
-      {fields.map((field) => (
+      {open && fields.map((field) => (
         <Card
           key={field.id}
           className={`transition-shadow ${focusedId === field.id ? 'ring-2 ring-[#475569]' : ''}`}

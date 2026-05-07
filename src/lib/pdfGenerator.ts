@@ -119,6 +119,24 @@ function buildHalfElement(
     }
   })
 
+  // Border overlay: rendered last so it sits on top of all content.
+  // Uses box-sizing:border-box so the 1px border draws inward and stays
+  // within the captured area.
+  if (state.showBorder) {
+    const borderEl = document.createElement('div')
+    borderEl.style.cssText = [
+      `position:absolute`,
+      `top:0`,
+      `left:0`,
+      `width:100%`,
+      `height:100%`,
+      `border:1px solid #e0e0e0`,
+      `box-sizing:border-box`,
+      `pointer-events:none`,
+    ].join(';')
+    el.appendChild(borderEl)
+  }
+
   return el
 }
 

@@ -268,7 +268,7 @@ export function NameplateCanvas({
     width: widthPx,
     height: heightPx,
     overflow: 'hidden',
-    border: '1px solid #d1d5db',
+    border: state.showBorder ? '1px solid #e0e0e0' : 'none',
     ...bgStyle,
   }
 

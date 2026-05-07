@@ -13,7 +13,7 @@ import { ExportButton } from '@/components/ExportButton'
 import { HelpPanel } from '@/components/HelpPanel'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { ZoomIn, ZoomOut, RotateCcw, Square } from 'lucide-react'
 
 const PREVIEW_MAX_WIDTH = 460
 const MIN_ZOOM = 0.25
@@ -49,7 +49,8 @@ export default function Home() {
     moveFieldForPage,
     resizeFieldForPage,
     clearPageFieldOverride,
-    moveLayer,
+    setLayers,
+    setShowBorder,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -164,7 +165,7 @@ export default function Home() {
           <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-xs opacity-60">© min2448</span>
-            <span className="text-[10px] opacity-40">2026-05-08-v2</span>
+            <span className="text-[10px] opacity-40">2026-05-08-v3</span>
           </div>
         </header>
 
@@ -188,7 +189,7 @@ export default function Home() {
               layers={state.layers}
               fields={state.fields}
               overlayImages={state.overlayImages}
-              onMoveLayer={moveLayer}
+              onSetLayers={setLayers}
             />
             <hr />
             {/* 적용 범위 표시 */}
@@ -233,6 +234,15 @@ export default function Home() {
               </button>
               <button onClick={handleZoomReset} className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50" title="원래 크기">
                 <RotateCcw className="w-3 h-3" />
+              </button>
+              <div className="w-px h-4 bg-gray-200 mx-0.5" />
+              <button
+                onClick={() => setShowBorder(!state.showBorder)}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${state.showBorder ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}
+                title={state.showBorder ? '테두리 숨기기' : '테두리 표시'}
+              >
+                <Square className="w-3 h-3" />
+                테두리
               </button>
               {hasPageOverride && !applyToAll && (
                 <button

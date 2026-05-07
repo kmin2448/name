@@ -49,6 +49,7 @@ export type NameplateState = {
   pageFieldOverrides: Record<number, Record<string, TextFieldConfig>>
   previewData: Record<string, string>
   excelRows: Record<string, string>[]
+  showBorder: boolean
 }
 
 export type ExcelParseResult = {

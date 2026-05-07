@@ -24,6 +24,8 @@ type Action =
   | { type: 'RESIZE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; widthPct: number; heightPct: number } }
   | { type: 'CLEAR_PAGE_FIELD_OVERRIDE'; payload: number }
   | { type: 'MOVE_LAYER'; payload: { id: string; direction: 'up' | 'down' } }
+  | { type: 'SET_LAYERS'; payload: string[] }
+  | { type: 'SET_SHOW_BORDER'; payload: boolean }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -209,6 +211,12 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       return { ...state, layers: next }
     }
 
+    case 'SET_LAYERS':
+      return { ...state, layers: action.payload }
+
+    case 'SET_SHOW_BORDER':
+      return { ...state, showBorder: action.payload }
+
     default:
       return state
   }
@@ -223,6 +231,7 @@ export const initialState: NameplateState = {
   pageFieldOverrides: {},
   previewData: SAMPLE_PREVIEW_DATA,
   excelRows: [],
+  showBorder: true,
 }
 
 export function useNameplateState() {
@@ -279,6 +288,14 @@ export function useNameplateState() {
       dispatch({ type: 'MOVE_LAYER', payload: { id, direction } }),
     []
   )
+  const setLayers = useCallback(
+    (layers: string[]) => dispatch({ type: 'SET_LAYERS', payload: layers }),
+    []
+  )
+  const setShowBorder = useCallback(
+    (v: boolean) => dispatch({ type: 'SET_SHOW_BORDER', payload: v }),
+    []
+  )
 
   return {
     state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
@@ -286,6 +303,6 @@ export function useNameplateState() {
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
-    moveLayer,
+    moveLayer, setLayers, setShowBorder,
   }
 }
