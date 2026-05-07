@@ -24,7 +24,8 @@
       "Bash(Select-Object -ExpandProperty StatusCode)",
       "PowerShell(Start-Sleep -Seconds 6; try { \\(Invoke-WebRequest -Uri \"http://localhost:3000\" -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"not ready yet: $_\" })",
       "Bash(vercel *)",
-      "PowerShell(vercel *)"
+      "PowerShell(vercel *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

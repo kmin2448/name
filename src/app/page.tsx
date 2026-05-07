@@ -37,6 +37,7 @@ export default function Home() {
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
+  const [applyToAll, setApplyToAll] = useState(false)
 
   const baseScale = Math.min(1, PREVIEW_MAX_WIDTH / (state.size.widthMm * MM_TO_PX))
   const scale = baseScale * zoom
@@ -62,9 +63,15 @@ export default function Home() {
 
   const handleRowFieldChange = (fieldLabel: string, value: string) => {
     if (selectedRowIndex < 0) return
-    const updated = { ...state.excelRows[selectedRowIndex], [fieldLabel]: value }
-    updateExcelRow(selectedRowIndex, updated)
-    setPreviewData(updated)
+    if (applyToAll) {
+      const updatedRows = state.excelRows.map((row) => ({ ...row, [fieldLabel]: value }))
+      setExcelRows(updatedRows)
+      setPreviewData(updatedRows[selectedRowIndex])
+    } else {
+      const updated = { ...state.excelRows[selectedRowIndex], [fieldLabel]: value }
+      updateExcelRow(selectedRowIndex, updated)
+      setPreviewData(updated)
+    }
   }
 
   const handleZoomIn = () => setZoom((v) => Math.min(MAX_ZOOM, parseFloat((v + 0.1).toFixed(1))))
@@ -147,16 +154,37 @@ export default function Home() {
 
             {/* 선택된 페이지 데이터 인라인 편집 */}
             {selectedRowIndex >= 0 && state.excelRows.length > 0 && (
-              <div className="mt-4 w-full max-w-lg bg-white border border-gray-200 rounded-lg px-4 py-3">
-                <p className="text-xs font-semibold text-gray-600 mb-2">
-                  {selectedRowIndex + 1}번 데이터 편집 (총 {state.excelRows.length}명)
-                </p>
+              <div className={`mt-4 w-full max-w-lg bg-white border rounded-lg px-4 py-3 transition-colors ${applyToAll ? 'border-orange-300' : 'border-gray-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-gray-600">
+                    {selectedRowIndex + 1}번 데이터 편집 (총 {state.excelRows.length}명)
+                  </p>
+                  <div className="flex text-xs border border-gray-200 rounded overflow-hidden">
+                    <button
+                      onClick={() => setApplyToAll(false)}
+                      className={`px-2 py-0.5 transition-colors ${!applyToAll ? 'bg-[#1F5C99] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      이 페이지만
+                    </button>
+                    <button
+                      onClick={() => setApplyToAll(true)}
+                      className={`px-2 py-0.5 border-l border-gray-200 transition-colors ${applyToAll ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      전체 적용
+                    </button>
+                  </div>
+                </div>
+                {applyToAll && (
+                  <p className="text-xs text-orange-500 mb-2">
+                    ⚠ 입력한 내용이 전체 {state.excelRows.length}개 페이지에 동일하게 적용됩니다
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                   {state.fields.map((field) => (
                     <div key={field.id} className="flex items-center gap-1.5">
                       <span className="text-xs text-gray-500 whitespace-nowrap">{field.label}</span>
                       <input
-                        className="h-6 text-xs border border-gray-200 rounded px-1.5 w-28 focus:outline-none focus:border-[#1F5C99]"
+                        className={`h-6 text-xs border rounded px-1.5 w-28 focus:outline-none ${applyToAll ? 'border-orange-300 focus:border-orange-500' : 'border-gray-200 focus:border-[#1F5C99]'}`}
                         value={state.excelRows[selectedRowIndex]?.[field.label] ?? ''}
                         onChange={(e) => handleRowFieldChange(field.label, e.target.value)}
                       />
