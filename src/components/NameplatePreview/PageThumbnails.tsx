@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 import { useRef, useState, useEffect } from 'react'
 import { TextFieldConfig, NameplateSize, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
-import { renderOverlayImages } from '@/components/NameplatePreview/NameplateCanvas'
+import { renderItemsStatic } from '@/components/NameplatePreview/NameplateCanvas'
 
 const COLS = 4
 const GAP = 8
@@ -15,6 +15,7 @@ type Props = {
   size: NameplateSize
   backgroundImage: string | null
   overlayImages: OverlayImage[]
+  layers: string[]
   selectedIndex: number
   onSelect: (index: number) => void
 }
@@ -37,18 +38,14 @@ function getLabel(row: Record<string, string>, fields: TextFieldConfig[]): strin
 }
 
 function ThumbnailFace({
-  row,
-  fields,
-  size,
-  backgroundImage,
-  overlayImages,
-  thumbWidth,
+  row, fields, size, backgroundImage, overlayImages, layers, thumbWidth,
 }: {
   row: Record<string, string>
   fields: TextFieldConfig[]
   size: NameplateSize
   backgroundImage: string | null
   overlayImages: OverlayImage[]
+  layers: string[]
   thumbWidth: number
 }) {
   const widthPx = size.widthMm * MM_TO_PX
@@ -66,49 +63,15 @@ function ThumbnailFace({
   return (
     <div style={{ width: thumbWidth, height: thumbH, position: 'relative', overflow: 'hidden', ...bgStyle }}>
       <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})`, width: widthPx, height: heightPx }}>
-        {renderOverlayImages(overlayImages, row)}
-        {fields.map((field) => {
-          const justifyContent =
-            field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
-          return (
-            <div
-              key={field.id}
-              style={{
-                position: 'absolute',
-                left: `${field.positionX}%`,
-                top: `${field.positionY}%`,
-                width: `${field.widthPct}%`,
-                height: `${field.heightPct}%`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent,
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: `${field.fontSize}px`,
-                  fontWeight: field.fontWeight,
-                  fontFamily: field.fontFamily,
-                  textAlign: field.textAlign,
-                  color: field.color,
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1.2,
-                  flexShrink: 0,
-                }}
-              >
-                {row[field.label] ?? ''}
-              </span>
-            </div>
-          )
-        })}
+        {renderItemsStatic(layers, fields, overlayImages, row)}
       </div>
     </div>
   )
 }
 
-export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgroundImage, overlayImages, selectedIndex, onSelect }: Props) {
+export function PageThumbnails({
+  rows, fields, pageFieldOverrides, size, backgroundImage, overlayImages, layers, selectedIndex, onSelect,
+}: Props) {
   if (rows.length === 0) return null
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -119,8 +82,7 @@ export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgro
     if (!el) return
     const observer = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width
-      const computed = Math.floor((w - GAP * (COLS - 1)) / COLS)
-      setThumbWidth(Math.max(60, computed))
+      setThumbWidth(Math.max(60, Math.floor((w - GAP * (COLS - 1)) / COLS)))
     })
     observer.observe(el)
     return () => observer.disconnect()
@@ -135,13 +97,7 @@ export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgro
         총 {rows.length}명 · 썸네일 클릭 시 해당 페이지 미리보기
       </p>
       {thumbWidth > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-            gap: GAP,
-          }}
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: GAP }}>
           {visible.map((row, i) => {
             const effectiveFields = getEffectiveFields(fields, pageFieldOverrides[i])
             const hasOverride = !!pageFieldOverrides[i] && Object.keys(pageFieldOverrides[i]).length > 0
@@ -151,11 +107,19 @@ export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgro
                 onClick={() => onSelect(i)}
                 className="cursor-pointer rounded overflow-hidden transition-all"
                 style={{
-                  outline: selectedIndex === i ? '2.5px solid #1F5C99' : '1.5px solid #e5e7eb',
+                  outline: selectedIndex === i ? '2.5px solid #475569' : '1.5px solid #e5e7eb',
                   outlineOffset: 1,
                 }}
               >
-                <ThumbnailFace row={row} fields={effectiveFields} size={size} backgroundImage={backgroundImage} overlayImages={overlayImages} thumbWidth={thumbWidth} />
+                <ThumbnailFace
+                  row={row}
+                  fields={effectiveFields}
+                  size={size}
+                  backgroundImage={backgroundImage}
+                  overlayImages={overlayImages}
+                  layers={layers}
+                  thumbWidth={thumbWidth}
+                />
                 <div
                   className="text-center bg-white border-t border-gray-100 text-gray-500 flex items-center justify-center gap-1"
                   style={{ fontSize: 9, padding: '2px 4px', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
@@ -169,9 +133,7 @@ export function PageThumbnails({ rows, fields, pageFieldOverrides, size, backgro
             )
           })}
           {overflow > 0 && (
-            <div className="flex items-center justify-center text-xs text-gray-400 py-4">
-              +{overflow}명
-            </div>
+            <div className="flex items-center justify-center text-xs text-gray-400 py-4">+{overflow}명</div>
           )}
         </div>
       )}

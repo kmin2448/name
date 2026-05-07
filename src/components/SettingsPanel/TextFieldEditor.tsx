@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { TextFieldConfig } from '@/types/nameplate'
 import { Button } from '@/components/ui/button'
@@ -102,7 +102,7 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }
       {fields.map((field) => (
         <Card
           key={field.id}
-          className={`transition-shadow ${focusedId === field.id ? 'ring-2 ring-[#1F5C99]' : ''}`}
+          className={`transition-shadow ${focusedId === field.id ? 'ring-2 ring-[#475569]' : ''}`}
         >
           <CardHeader className="py-2 px-3 pb-0">
             <div className="flex items-center gap-2">

@@ -32,6 +32,11 @@ export type OverlayImage = {
   widthPct: number   // % of canvas width
   heightPct: number  // % of canvas height
   condition: ImageCondition
+  // Crop region in % of image natural size (defaults: 0, 0, 100, 100 = no crop)
+  cropX: number
+  cropY: number
+  cropW: number
+  cropH: number
 }
 
 export type NameplateState = {
@@ -39,6 +44,8 @@ export type NameplateState = {
   backgroundImage: string | null
   overlayImages: OverlayImage[]
   fields: TextFieldConfig[]
+  // Render order: index 0 = bottommost layer, last = topmost
+  layers: string[]
   pageFieldOverrides: Record<number, Record<string, TextFieldConfig>>
   previewData: Record<string, string>
   excelRows: Record<string, string>[]

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -51,13 +51,13 @@ function ConditionEditor({
       <div className="flex text-xs border border-gray-200 rounded overflow-hidden">
         <button
           onClick={() => onChange({ type: 'all' })}
-          className={`flex-1 py-1 transition-colors ${condition.type === 'all' ? 'bg-[#1F5C99] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+          className={`flex-1 py-1 transition-colors ${condition.type === 'all' ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
         >
           전체 적용
         </button>
         <button
           onClick={() => onChange({ type: 'field', fieldLabel: fields[0]?.label ?? '', fieldValue: '' })}
-          className={`flex-1 py-1 border-l border-gray-200 transition-colors ${condition.type === 'field' ? 'bg-[#1F5C99] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+          className={`flex-1 py-1 border-l border-gray-200 transition-colors ${condition.type === 'field' ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
         >
           조건 적용
         </button>
@@ -70,7 +70,7 @@ function ConditionEditor({
             <select
               value={condition.fieldLabel}
               onChange={(e) => onChange({ type: 'field', fieldLabel: e.target.value, fieldValue: '' })}
-              className="w-full mt-0.5 h-7 text-xs border border-gray-200 rounded px-1.5 focus:outline-none focus:border-[#1F5C99] bg-white"
+              className="w-full mt-0.5 h-7 text-xs border border-gray-200 rounded px-1.5 focus:outline-none focus:border-[#475569] bg-white"
             >
               {fields.length === 0 && <option value="">— 항목 없음 —</option>}
               {fields.map((f) => (
@@ -84,7 +84,7 @@ function ConditionEditor({
               <select
                 value={condition.fieldValue}
                 onChange={(e) => onChange({ ...condition, fieldValue: e.target.value })}
-                className="w-full mt-0.5 h-7 text-xs border border-gray-200 rounded px-1.5 focus:outline-none focus:border-[#1F5C99] bg-white"
+                className="w-full mt-0.5 h-7 text-xs border border-gray-200 rounded px-1.5 focus:outline-none focus:border-[#475569] bg-white"
               >
                 <option value="">— 선택 —</option>
                 {uniqueValues.map((v) => (
@@ -97,11 +97,11 @@ function ConditionEditor({
                 value={condition.fieldValue}
                 onChange={(e) => onChange({ ...condition, fieldValue: e.target.value })}
                 placeholder="값 직접 입력"
-                className="w-full mt-0.5 h-7 text-xs border border-gray-200 rounded px-1.5 focus:outline-none focus:border-[#1F5C99]"
+                className="w-full mt-0.5 h-7 text-xs border border-gray-200 rounded px-1.5 focus:outline-none focus:border-[#475569]"
               />
             )}
             {matchCount !== null && excelRows.length > 0 && (
-              <p className="text-xs text-[#1F5C99] mt-0.5">
+              <p className="text-xs text-[#475569] mt-0.5">
                 → {matchCount}개 페이지에 적용됨
               </p>
             )}
@@ -135,7 +135,7 @@ function SliderInput({
         step={1}
         value={Math.round(value)}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="flex-1 h-1.5 accent-[#1F5C99]"
+        className="flex-1 h-1.5 accent-[#475569]"
       />
       <input
         type="number"
@@ -190,6 +190,10 @@ export function OverlayImageManager({ images, fields, excelRows, onAdd, onUpdate
         widthPct: 30,
         heightPct: 30,
         condition: { type: 'all' },
+        cropX: 0,
+        cropY: 0,
+        cropW: 100,
+        cropH: 100,
       }
       onAdd(newImg)
       setExpandedId(newImg.id)

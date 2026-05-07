@@ -23,6 +23,7 @@ type Action =
   | { type: 'MOVE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; positionX: number; positionY: number } }
   | { type: 'RESIZE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; widthPct: number; heightPct: number } }
   | { type: 'CLEAR_PAGE_FIELD_OVERRIDE'; payload: number }
+  | { type: 'MOVE_LAYER'; payload: { id: string; direction: 'up' | 'down' } }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -50,23 +51,54 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       return { ...state, size: action.payload }
     case 'SET_BACKGROUND':
       return { ...state, backgroundImage: action.payload }
+
     case 'ADD_OVERLAY_IMAGE':
-      return { ...state, overlayImages: [...state.overlayImages, action.payload] }
+      return {
+        ...state,
+        overlayImages: [...state.overlayImages, action.payload],
+        // New overlay images go at the bottom of the layer stack (behind text)
+        layers: [action.payload.id, ...state.layers],
+      }
     case 'UPDATE_OVERLAY_IMAGE':
-      return { ...state, overlayImages: state.overlayImages.map((img) => img.id === action.payload.id ? action.payload : img) }
+      return {
+        ...state,
+        overlayImages: state.overlayImages.map((img) => img.id === action.payload.id ? action.payload : img),
+      }
     case 'REMOVE_OVERLAY_IMAGE':
-      return { ...state, overlayImages: state.overlayImages.filter((img) => img.id !== action.payload) }
-    case 'SET_FIELDS':
-      return { ...state, fields: action.payload }
+      return {
+        ...state,
+        overlayImages: state.overlayImages.filter((img) => img.id !== action.payload),
+        layers: state.layers.filter((id) => id !== action.payload),
+      }
+
+    case 'SET_FIELDS': {
+      const newFields = action.payload
+      const newFieldIds = newFields.map((f) => f.id)
+      const overlayIds = state.overlayImages.map((o) => o.id)
+      // Preserve existing layer order; put unlisted items at bottom
+      const preserved = state.layers.filter((id) => newFieldIds.includes(id) || overlayIds.includes(id))
+      const added = newFieldIds.filter((id) => !preserved.includes(id))
+      return { ...state, fields: newFields, layers: [...added, ...preserved] }
+    }
     case 'ADD_FIELD': {
       const maxBottom = state.fields.reduce((m, f) => Math.max(m, f.positionY + f.heightPct), 0)
-      return { ...state, fields: [...state.fields, makeNewField('새 항목', maxBottom + 3)] }
+      const newField = makeNewField('새 항목', maxBottom + 3)
+      return {
+        ...state,
+        fields: [...state.fields, newField],
+        layers: [...state.layers, newField.id],
+      }
     }
     case 'ADD_FIELD_WITH_LABEL': {
       const label = action.payload
       if (state.fields.some((f) => f.label === label)) return state
       const maxBottom = state.fields.reduce((m, f) => Math.max(m, f.positionY + f.heightPct), 0)
-      return { ...state, fields: [...state.fields, makeNewField(label, maxBottom + 3)] }
+      const newField = makeNewField(label, maxBottom + 3)
+      return {
+        ...state,
+        fields: [...state.fields, newField],
+        layers: [...state.layers, newField.id],
+      }
     }
     case 'UPDATE_FIELD':
       return {
@@ -74,7 +106,11 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
         fields: state.fields.map((f) => (f.id === action.payload.id ? action.payload : f)),
       }
     case 'REMOVE_FIELD':
-      return { ...state, fields: state.fields.filter((f) => f.id !== action.payload) }
+      return {
+        ...state,
+        fields: state.fields.filter((f) => f.id !== action.payload),
+        layers: state.layers.filter((id) => id !== action.payload),
+      }
     case 'MOVE_FIELD':
       return {
         ...state,
@@ -159,6 +195,20 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
         },
       }
     }
+
+    case 'MOVE_LAYER': {
+      const { id, direction } = action.payload
+      const idx = state.layers.indexOf(id)
+      if (idx === -1) return state
+      const next = [...state.layers]
+      if (direction === 'up' && idx < next.length - 1) {
+        ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
+      } else if (direction === 'down' && idx > 0) {
+        ;[next[idx], next[idx - 1]] = [next[idx - 1], next[idx]]
+      }
+      return { ...state, layers: next }
+    }
+
     default:
       return state
   }
@@ -169,6 +219,7 @@ export const initialState: NameplateState = {
   backgroundImage: null,
   overlayImages: [],
   fields: DEFAULT_FIELDS,
+  layers: DEFAULT_FIELDS.map((f) => f.id),
   pageFieldOverrides: {},
   previewData: SAMPLE_PREVIEW_DATA,
   excelRows: [],
@@ -223,6 +274,11 @@ export function useNameplateState() {
     (pageIndex: number) => dispatch({ type: 'CLEAR_PAGE_FIELD_OVERRIDE', payload: pageIndex }),
     []
   )
+  const moveLayer = useCallback(
+    (id: string, direction: 'up' | 'down') =>
+      dispatch({ type: 'MOVE_LAYER', payload: { id, direction } }),
+    []
+  )
 
   return {
     state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
@@ -230,5 +286,6 @@ export function useNameplateState() {
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
+    moveLayer,
   }
 }

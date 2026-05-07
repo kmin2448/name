@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useRef, useCallback } from 'react'
 import { TextFieldConfig } from '@/types/nameplate'
 
@@ -109,7 +109,7 @@ export function DraggableTextField({
         cursor: 'move',
         boxSizing: 'border-box',
         border: isFocused
-          ? '1.5px dashed #1F5C99'
+          ? '1.5px dashed #475569'
           : '1px dashed rgba(31, 92, 153, 0.25)',
         display: 'flex',
         alignItems: 'center',
@@ -143,7 +143,7 @@ export function DraggableTextField({
             right: -4,
             width: 9,
             height: 9,
-            background: '#1F5C99',
+            background: '#475569',
             cursor: 'nwse-resize',
             borderRadius: 2,
             zIndex: 1,

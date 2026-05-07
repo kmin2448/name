@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { Button } from '@/components/ui/button'
 import { usePdfExport } from '@/hooks/usePdfExport'
 import { NameplateState } from '@/types/nameplate'
@@ -26,7 +26,7 @@ export function ExportButton({ state }: Props) {
     <Button
       onClick={handleExport}
       disabled={isExporting}
-      className="w-full bg-[#1F5C99] hover:bg-[#1a4d82] text-white"
+      className="w-full bg-[#475569] hover:bg-[#334155] text-white"
     >
       <Download className="w-4 h-4 mr-2" />
       {isExporting

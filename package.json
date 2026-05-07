@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test": "jest --passWithNoTests",
     "type-check": "tsc --noEmit",
-    "push": "git add . && git commit -m 'update' && git push"
+    "push": "node scripts/bump-version.js && git add . && git commit -m 'update' && git push"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",

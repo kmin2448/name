@@ -1,12 +1,13 @@
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-import { NameplateState, TextFieldConfig } from '@/types/nameplate'
+import { NameplateState, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 
 const A4_W_MM = 210
 const A4_H_MM = 297
-// scale:3 → 96×3 = 288 DPI 인쇄 품질
-const PRINT_SCALE = 3
+// Base print scale; multiplied by devicePixelRatio at runtime for HiDPI screens
+const BASE_PRINT_SCALE = 3
+const MAX_PRINT_SCALE = 5
 
 function getEffectiveFields(state: NameplateState, pageIndex: number): TextFieldConfig[] {
   const overrides = state.pageFieldOverrides[pageIndex]
@@ -14,13 +15,19 @@ function getEffectiveFields(state: NameplateState, pageIndex: number): TextField
   return state.fields.map((f) => overrides[f.id] ?? f)
 }
 
+function overlayMatches(img: OverlayImage, rowData: Record<string, string>): boolean {
+  return img.condition.type === 'all' || rowData[img.condition.fieldLabel] === img.condition.fieldValue
+}
+
 function buildHalfElement(
   fields: TextFieldConfig[],
+  overlayImages: OverlayImage[],
+  layers: string[],
   rowData: Record<string, string>,
   state: NameplateState,
   rotate: boolean
 ): HTMLDivElement {
-  const { size, backgroundImage, overlayImages } = state
+  const { size, backgroundImage } = state
   const el = document.createElement('div')
   el.style.cssText = [
     `position:relative`,
@@ -32,70 +39,89 @@ function buildHalfElement(
     `background-size:cover`,
     `background-position:center`,
     rotate ? `transform:rotate(180deg)` : '',
-  ]
-    .filter(Boolean)
-    .join(';')
+  ].filter(Boolean).join(';')
 
-  overlayImages.forEach((img) => {
-    const matches =
-      img.condition.type === 'all' ||
-      rowData[img.condition.fieldLabel] === img.condition.fieldValue
-    if (!matches) return
+  const effectiveLayers = layers.length > 0 ? layers : fields.map((f) => f.id)
 
-    const imgEl = document.createElement('img')
-    imgEl.src = img.src
-    imgEl.style.cssText = [
-      `position:absolute`,
-      `left:${img.positionX}%`,
-      `top:${img.positionY}%`,
-      `width:${img.widthPct}%`,
-      `height:${img.heightPct}%`,
-      `object-fit:contain`,
-      `pointer-events:none`,
-    ].join(';')
-    el.appendChild(imgEl)
-  })
+  effectiveLayers.forEach((id) => {
+    const field = fields.find((f) => f.id === id)
+    if (field) {
+      const justifyContent =
+        field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
 
-  fields.forEach((field: TextFieldConfig) => {
-    const justifyContent =
-      field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
+      const box = document.createElement('div')
+      // Use overflow:visible so text that slightly exceeds the bounding box
+      // (due to font ascender/descender metrics) is not hard-clipped.
+      // A small vertical padding provides an additional safety margin.
+      box.style.cssText = [
+        `position:absolute`,
+        `left:${field.positionX}%`,
+        `top:${field.positionY}%`,
+        `width:${field.widthPct}%`,
+        `height:${field.heightPct}%`,
+        `display:flex`,
+        `align-items:center`,
+        `justify-content:${justifyContent}`,
+        `overflow:visible`,
+        `box-sizing:border-box`,
+        `padding:0 2px`,
+      ].join(';')
 
-    const box = document.createElement('div')
-    box.style.cssText = [
-      `position:absolute`,
-      `left:${field.positionX}%`,
-      `top:${field.positionY}%`,
-      `width:${field.widthPct}%`,
-      `height:${field.heightPct}%`,
-      `display:flex`,
-      `align-items:center`,
-      `justify-content:${justifyContent}`,
-      `overflow:hidden`,
-      `box-sizing:border-box`,
-    ].join(';')
+      const text = document.createElement('span')
+      text.style.cssText = [
+        `font-size:${field.fontSize}px`,
+        `font-weight:${field.fontWeight}`,
+        `font-family:${field.fontFamily}`,
+        `text-align:${field.textAlign}`,
+        `color:${field.color}`,
+        `white-space:nowrap`,
+        // line-height:1 instead of 1.2 minimises the vertical extent
+        // of the inline box, reducing clipping risk at box edges.
+        `line-height:1`,
+        `flex-shrink:0`,
+        `display:block`,
+      ].join(';')
+      text.textContent = rowData[field.label] ?? ''
+      box.appendChild(text)
+      el.appendChild(box)
+      return
+    }
 
-    const text = document.createElement('span')
-    text.style.cssText = [
-      `font-size:${field.fontSize}px`,
-      `font-weight:${field.fontWeight}`,
-      `font-family:${field.fontFamily}`,
-      `text-align:${field.textAlign}`,
-      `color:${field.color}`,
-      `white-space:nowrap`,
-      `line-height:1.2`,
-      `flex-shrink:0`,
-    ].join(';')
-    text.textContent = rowData[field.label] ?? ''
-    box.appendChild(text)
-    el.appendChild(box)
+    const img = overlayImages.find((o) => o.id === id)
+    if (img && overlayMatches(img, rowData)) {
+      const { cropX, cropY, cropW, cropH } = img
+
+      const container = document.createElement('div')
+      container.style.cssText = [
+        `position:absolute`,
+        `left:${img.positionX}%`,
+        `top:${img.positionY}%`,
+        `width:${img.widthPct}%`,
+        `height:${img.heightPct}%`,
+        `overflow:hidden`,
+        `pointer-events:none`,
+      ].join(';')
+
+      const imgEl = document.createElement('img')
+      imgEl.src = img.src
+      imgEl.style.cssText = [
+        `position:absolute`,
+        `left:${-(cropX / cropW) * 100}%`,
+        `top:${-(cropY / cropH) * 100}%`,
+        `width:${(100 / cropW) * 100}%`,
+        `height:${(100 / cropH) * 100}%`,
+        `object-fit:fill`,
+        `pointer-events:none`,
+      ].join(';')
+
+      container.appendChild(imgEl)
+      el.appendChild(container)
+    }
   })
 
   return el
 }
 
-// 명패 크기에 따라 A4 방향 결정
-// - widthMm ≤ 210 → 세로(portrait)
-// - widthMm > 210 (A형 250mm 등) → 가로(landscape, 297×210)
 function getPageLayout(widthMm: number): {
   orientation: 'portrait' | 'landscape'
   pageW: number
@@ -116,35 +142,36 @@ export async function generatePdf(
   const totalHeightMm = size.heightMm * 2
 
   const { orientation, pageW, pageH } = getPageLayout(size.widthMm)
-
-  // 명패를 A4 중앙에 배치하기 위한 여백
   const offsetX = (pageW - size.widthMm) / 2
   const offsetY = (pageH - totalHeightMm) / 2
 
-  const pdf = new jsPDF({
-    orientation,
-    unit: 'mm',
-    format: 'a4',
-  })
+  // Wait for all web fonts to finish loading before capturing.
+  // This prevents fallback-font rendering that produces different glyph metrics.
+  if (typeof document !== 'undefined' && document.fonts) {
+    await document.fonts.ready
+  }
+
+  // Use devicePixelRatio so HiDPI screens produce sharper captures.
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1
+  const printScale = Math.min(MAX_PRINT_SCALE, Math.round(BASE_PRINT_SCALE * dpr))
+
+  const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' })
 
   for (let i = 0; i < rows.length; i++) {
     onProgress?.(i + 1, rows.length)
 
-    // 페이지별 필드 오버라이드 반영
     const effectiveFields = getEffectiveFields(state, i)
 
     const wrapper = document.createElement('div')
-    // position:absolute + 음수 left: fixed보다 안정적으로 화면 밖 렌더링
     wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;display:inline-block;'
-    wrapper.appendChild(buildHalfElement(effectiveFields, rows[i], state, true))
-    wrapper.appendChild(buildHalfElement(effectiveFields, rows[i], state, false))
+    wrapper.appendChild(buildHalfElement(effectiveFields, state.overlayImages, state.layers, rows[i], state, true))
+    wrapper.appendChild(buildHalfElement(effectiveFields, state.overlayImages, state.layers, rows[i], state, false))
     document.body.appendChild(wrapper)
 
     const canvas = await html2canvas(wrapper, {
-      scale: PRINT_SCALE,
+      scale: printScale,
       useCORS: true,
       logging: false,
-      // 명시적 캡처 영역 지정으로 잘림 방지
       width: size.widthMm * MM_TO_PX,
       height: totalHeightMm * MM_TO_PX,
       x: 0,
@@ -153,7 +180,6 @@ export async function generatePdf(
     const imgData = canvas.toDataURL('image/png')
 
     if (i > 0) pdf.addPage()
-    // A4 중앙에 실제 명패 크기(mm)로 배치
     pdf.addImage(imgData, 'PNG', offsetX, offsetY, size.widthMm, totalHeightMm)
 
     document.body.removeChild(wrapper)

@@ -1,7 +1,8 @@
-'use client'
+﻿'use client'
 import { useRef, useState, useCallback } from 'react'
 import { NameplateState, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DraggableTextField } from './DraggableTextField'
+import { DraggableOverlayImage } from './DraggableOverlayImage'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { Ruler } from 'lucide-react'
 
@@ -31,7 +32,6 @@ function calcSnap(
   const dragRight = rawX + widthPct
   const dragBottom = rawY + heightPct
 
-  // Snap center to canvas center
   if (Math.abs(centerX - 50) < SNAP_THRESHOLD) {
     x = 50 - widthPct / 2
     guides.push({ type: 'vertical', position: 50, isCenter: true })
@@ -50,11 +50,10 @@ function calcSnap(
     const oR = oX + field.widthPct
     const oB = oY + field.heightPct
 
-    // --- X axis: left edge, center, right edge ---
-    const xCandidates: { snap: number; pos: number; delta: number }[] = [
-      { snap: oX, pos: oX, delta: Math.abs(rawX - oX) },              // left-left
-      { snap: oCX - widthPct / 2, pos: oCX, delta: Math.abs(centerX - oCX) },  // center-center
-      { snap: oR - widthPct, pos: oR, delta: Math.abs(dragRight - oR) }, // right-right
+    const xCandidates = [
+      { snap: oX, pos: oX, delta: Math.abs(rawX - oX) },
+      { snap: oCX - widthPct / 2, pos: oCX, delta: Math.abs(centerX - oCX) },
+      { snap: oR - widthPct, pos: oR, delta: Math.abs(dragRight - oR) },
     ].filter((c) => c.delta < SNAP_THRESHOLD)
 
     if (xCandidates.length > 0) {
@@ -63,11 +62,10 @@ function calcSnap(
       guides.push({ type: 'vertical', position: best.pos, isCenter: false })
     }
 
-    // --- Y axis: top edge, center, bottom edge ---
-    const yCandidates: { snap: number; pos: number; delta: number }[] = [
-      { snap: oY, pos: oY, delta: Math.abs(rawY - oY) },                     // top-top
-      { snap: oCY - heightPct / 2, pos: oCY, delta: Math.abs(centerY - oCY) }, // center-center
-      { snap: oB - heightPct, pos: oB, delta: Math.abs(dragBottom - oB) },     // bottom-bottom
+    const yCandidates = [
+      { snap: oY, pos: oY, delta: Math.abs(rawY - oY) },
+      { snap: oCY - heightPct / 2, pos: oCY, delta: Math.abs(centerY - oCY) },
+      { snap: oB - heightPct, pos: oB, delta: Math.abs(dragBottom - oB) },
     ].filter((c) => c.delta < SNAP_THRESHOLD)
 
     if (yCandidates.length > 0) {
@@ -77,19 +75,16 @@ function calcSnap(
     }
   }
 
-  // Deduplicate guides
   const seen = new Set<string>()
-  const deduped = guides.filter((g) => {
-    const key = `${g.type}-${g.position}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-
   return {
     x: Math.max(0, Math.min(100 - widthPct, x)),
     y: Math.max(0, Math.min(100 - heightPct, y)),
-    guides: deduped,
+    guides: guides.filter((g) => {
+      const key = `${g.type}-${g.position}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }),
   }
 }
 
@@ -104,17 +99,11 @@ function HRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
     ticks.push(
       <g key={mm}>
         <line x1={x} y1={RULER_SIZE} x2={x} y2={RULER_SIZE - tickH} stroke="#999" strokeWidth={0.5} />
-        {isMajor && mm > 0 && (
-          <text x={x} y={RULER_SIZE - 14} textAnchor="middle" fontSize={7} fill="#777">{mm}</text>
-        )}
+        {isMajor && mm > 0 && <text x={x} y={RULER_SIZE - 14} textAnchor="middle" fontSize={7} fill="#777">{mm}</text>}
       </g>
     )
   }
-  return (
-    <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', background: '#f6f6f6', borderBottom: '1px solid #d1d5db' }}>
-      {ticks}
-    </svg>
-  )
+  return <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', background: '#f6f6f6', borderBottom: '1px solid #d1d5db' }}>{ticks}</svg>
 }
 
 function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
@@ -128,104 +117,131 @@ function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
     ticks.push(
       <g key={mm}>
         <line x1={RULER_SIZE} y1={y} x2={RULER_SIZE - tickW} y2={y} stroke="#999" strokeWidth={0.5} />
-        {isMajor && mm > 0 && (
-          <text x={RULER_SIZE / 2} y={y + 3} textAnchor="middle" fontSize={7} fill="#777">{mm}</text>
-        )}
+        {isMajor && mm > 0 && <text x={RULER_SIZE / 2} y={y + 3} textAnchor="middle" fontSize={7} fill="#777">{mm}</text>}
       </g>
     )
   }
-  return (
-    <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', background: '#f6f6f6', borderRight: '1px solid #d1d5db' }}>
-      {ticks}
-    </svg>
-  )
+  return <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', background: '#f6f6f6', borderRight: '1px solid #d1d5db' }}>{ticks}</svg>
 }
 
-export function renderOverlayImages(overlayImages: OverlayImage[], rowData: Record<string, string>) {
-  return overlayImages
-    .filter((img) =>
-      img.condition.type === 'all' ||
-      rowData[img.condition.fieldLabel] === img.condition.fieldValue
-    )
-    .map((img) => (
-      // eslint-disable-next-line @next/next/no-img-element
+// ─── Static rendering helpers (used by PageThumbnails and PDF generator) ───
+
+function overlayMatchesRow(img: OverlayImage, rowData: Record<string, string>): boolean {
+  return img.condition.type === 'all' || rowData[img.condition.fieldLabel] === img.condition.fieldValue
+}
+
+function renderStaticOverlay(img: OverlayImage): React.ReactNode {
+  const { cropX, cropY, cropW, cropH } = img
+  return (
+    <div
+      key={img.id}
+      style={{
+        position: 'absolute',
+        left: `${img.positionX}%`, top: `${img.positionY}%`,
+        width: `${img.widthPct}%`, height: `${img.heightPct}%`,
+        overflow: 'hidden', pointerEvents: 'none',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        key={img.id}
         src={img.src}
         alt=""
         style={{
           position: 'absolute',
-          left: `${img.positionX}%`,
-          top: `${img.positionY}%`,
-          width: `${img.widthPct}%`,
-          height: `${img.heightPct}%`,
-          objectFit: 'contain',
+          left: `${-(cropX / cropW) * 100}%`,
+          top: `${-(cropY / cropH) * 100}%`,
+          width: `${(100 / cropW) * 100}%`,
+          height: `${(100 / cropH) * 100}%`,
+          objectFit: 'fill',
           pointerEvents: 'none',
         }}
       />
-    ))
+    </div>
+  )
 }
 
-export function renderStaticFields(fields: TextFieldConfig[], data: Record<string, string>) {
-  return fields.map((field) => {
-    const justifyContent =
-      field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
-    return (
-      <div
-        key={field.id}
-        style={{
-          position: 'absolute',
-          left: `${field.positionX}%`,
-          top: `${field.positionY}%`,
-          width: `${field.widthPct}%`,
-          height: `${field.heightPct}%`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent,
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-        }}
-      >
-        <span
-          style={{
-            fontSize: `${field.fontSize}px`,
-            fontWeight: field.fontWeight,
-            fontFamily: field.fontFamily,
-            textAlign: field.textAlign,
-            color: field.color,
-            whiteSpace: 'nowrap',
-            lineHeight: 1.2,
-            flexShrink: 0,
-          }}
-        >
-          {data[field.label] ?? `[${field.label}]`}
-        </span>
-      </div>
-    )
-  })
+function renderStaticField(field: TextFieldConfig, data: Record<string, string>): React.ReactNode {
+  const justifyContent =
+    field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
+  return (
+    <div
+      key={field.id}
+      style={{
+        position: 'absolute',
+        left: `${field.positionX}%`, top: `${field.positionY}%`,
+        width: `${field.widthPct}%`, height: `${field.heightPct}%`,
+        display: 'flex', alignItems: 'center', justifyContent,
+        overflow: 'hidden', boxSizing: 'border-box',
+      }}
+    >
+      <span style={{
+        fontSize: `${field.fontSize}px`, fontWeight: field.fontWeight,
+        fontFamily: field.fontFamily, textAlign: field.textAlign,
+        color: field.color, whiteSpace: 'nowrap', lineHeight: 1.2, flexShrink: 0,
+      }}>
+        {data[field.label] ?? `[${field.label}]`}
+      </span>
+    </div>
+  )
 }
+
+/**
+ * Renders all layers (fields + overlay images) as static React nodes.
+ * Exported for use by PageThumbnails.
+ */
+export function renderItemsStatic(
+  layers: string[],
+  fields: TextFieldConfig[],
+  overlayImages: OverlayImage[],
+  rowData: Record<string, string>
+): React.ReactNode[] {
+  const effectiveLayers = layers.length > 0 ? layers : fields.map((f) => f.id)
+  return effectiveLayers.map((id) => {
+    const field = fields.find((f) => f.id === id)
+    if (field) return renderStaticField(field, rowData)
+    const overlay = overlayImages.find((o) => o.id === id)
+    if (overlay && overlayMatchesRow(overlay, rowData)) return renderStaticOverlay(overlay)
+    return null
+  }).filter(Boolean)
+}
+
+// ─── Canvas component ───────────────────────────────────────────────────────
 
 type Props = {
   state: NameplateState
   overrideFields?: TextFieldConfig[]
   scale: number
   focusedFieldId: string | null
+  focusedOverlayId: string | null
   onMove: (id: string, positionX: number, positionY: number) => void
   onResize: (id: string, widthPct: number, heightPct: number) => void
   onFieldFocus: (id: string) => void
+  onOverlayFocus: (id: string) => void
+  onOverlayMove: (id: string, x: number, y: number) => void
+  onOverlayResize: (id: string, w: number, h: number) => void
+  onOverlayCrop: (id: string, cropX: number, cropY: number, cropW: number, cropH: number) => void
+  onDeselect: () => void
 }
 
-export function NameplateCanvas({ state, overrideFields, scale, focusedFieldId, onMove, onResize, onFieldFocus }: Props) {
+export function NameplateCanvas({
+  state, overrideFields, scale,
+  focusedFieldId, focusedOverlayId,
+  onMove, onResize, onFieldFocus,
+  onOverlayFocus, onOverlayMove, onOverlayResize, onOverlayCrop,
+  onDeselect,
+}: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showRuler, setShowRuler] = useState(false)
   const [guides, setGuides] = useState<GuideLine[]>([])
 
-  const { size, backgroundImage, overlayImages, previewData } = state
+  const { size, backgroundImage, overlayImages, previewData, layers } = state
   const fields = overrideFields ?? state.fields
   const widthPx = size.widthMm * MM_TO_PX
   const heightPx = size.heightMm * MM_TO_PX
   const scaledWidth = Math.round(widthPx * scale)
   const scaledHeight = Math.round(heightPx * scale)
+
+  const effectiveLayers = layers.length > 0 ? layers : fields.map((f) => f.id)
 
   const handleMove = useCallback(
     (id: string, rawX: number, rawY: number) => {
@@ -258,15 +274,10 @@ export function NameplateCanvas({ state, overrideFields, scale, focusedFieldId, 
 
   return (
     <div>
-      {/* Ruler toggle */}
       <div className="flex justify-end mb-2">
         <button
           onClick={() => setShowRuler((v) => !v)}
-          className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
-            showRuler
-              ? 'bg-[#1F5C99] text-white border-[#1F5C99]'
-              : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
-          }`}
+          className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${showRuler ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
         >
           <Ruler className="w-3 h-3" />
           눈금자
@@ -289,25 +300,51 @@ export function NameplateCanvas({ state, overrideFields, scale, focusedFieldId, 
               id="nameplate-export-container"
               style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}
             >
+              {/* ── Top half (rotated, static) ── */}
               <div style={{ ...halfStyle, transform: 'rotate(180deg)' }}>
-                {renderOverlayImages(overlayImages, previewData)}
-                {renderStaticFields(fields, previewData)}
+                {renderItemsStatic(effectiveLayers, fields, overlayImages, previewData)}
               </div>
-              <div ref={bottomRef} style={halfStyle}>
-                {renderOverlayImages(overlayImages, previewData)}
-                {fields.map((field) => (
-                  <DraggableTextField
-                    key={field.id}
-                    field={field}
-                    value={previewData[field.label] ?? ''}
-                    isFocused={focusedFieldId === field.id}
-                    onMove={handleMove}
-                    onResize={onResize}
-                    onFocus={onFieldFocus}
-                    onDragEnd={handleDragEnd}
-                    containerRef={bottomRef as React.RefObject<HTMLDivElement>}
-                  />
-                ))}
+
+              {/* ── Bottom half (interactive) ── */}
+              <div
+                ref={bottomRef}
+                style={halfStyle}
+                onClick={(e) => { if (e.target === bottomRef.current) onDeselect() }}
+              >
+                {effectiveLayers.map((id) => {
+                  const field = fields.find((f) => f.id === id)
+                  if (field) {
+                    return (
+                      <DraggableTextField
+                        key={field.id}
+                        field={field}
+                        value={previewData[field.label] ?? ''}
+                        isFocused={focusedFieldId === field.id}
+                        onMove={handleMove}
+                        onResize={onResize}
+                        onFocus={onFieldFocus}
+                        onDragEnd={handleDragEnd}
+                        containerRef={bottomRef as React.RefObject<HTMLDivElement>}
+                      />
+                    )
+                  }
+                  const overlay = overlayImages.find((o) => o.id === id)
+                  if (overlay && overlayMatchesRow(overlay, previewData)) {
+                    return (
+                      <DraggableOverlayImage
+                        key={overlay.id}
+                        image={overlay}
+                        isFocused={focusedOverlayId === overlay.id}
+                        onMove={onOverlayMove}
+                        onResize={onOverlayResize}
+                        onCrop={onOverlayCrop}
+                        onFocus={onOverlayFocus}
+                        containerRef={bottomRef as React.RefObject<HTMLDivElement>}
+                      />
+                    )
+                  }
+                  return null
+                })}
               </div>
             </div>
 
