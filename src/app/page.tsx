@@ -1,7 +1,91 @@
+'use client'
+import { useState } from 'react'
+import { Toaster } from 'sonner'
+import { useNameplateState } from '@/hooks/useNameplateState'
+import { SizeSelector } from '@/components/SettingsPanel/SizeSelector'
+import { BackgroundUploader } from '@/components/SettingsPanel/BackgroundUploader'
+import { TextFieldEditor } from '@/components/SettingsPanel/TextFieldEditor'
+import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
+import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
+import { ExportButton } from '@/components/ExportButton'
+import { ExcelParseResult } from '@/types/nameplate'
+import { MM_TO_PX } from '@/lib/sizeConstants'
+
 export default function Home() {
+  const {
+    state,
+    setSize,
+    setBackground,
+    addField,
+    updateField,
+    removeField,
+    moveField,
+    setPreviewData,
+    setExcelRows,
+  } = useNameplateState()
+
+  const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
+
+  const PREVIEW_MAX_WIDTH = 460
+  const scale = Math.min(1, PREVIEW_MAX_WIDTH / (state.size.widthMm * MM_TO_PX))
+
+  const handleExcelParsed = (result: ExcelParseResult) => {
+    setExcelRows(result.rows)
+    if (result.rows.length > 0) {
+      setPreviewData(result.rows[0])
+    }
+  }
+
   return (
-    <main>
-      <h1>명패 제작기 - 준비 중</h1>
-    </main>
+    <>
+      <Toaster position="top-right" richColors />
+      <div className="min-h-screen flex flex-col">
+        <header className="bg-[#1F5C99] text-white px-6 py-3 shrink-0">
+          <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
+        </header>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* 좌측 설정 패널 */}
+          <aside className="w-72 border-r overflow-y-auto p-4 space-y-5 shrink-0 bg-white">
+            <SizeSelector value={state.size} onChange={setSize} />
+            <hr />
+            <BackgroundUploader value={state.backgroundImage} onChange={setBackground} />
+            <hr />
+            <TextFieldEditor
+              fields={state.fields}
+              focusedId={focusedFieldId}
+              onUpdate={updateField}
+              onRemove={removeField}
+              onAdd={addField}
+            />
+            <hr />
+            <ExcelUploader
+              fields={state.fields}
+              rowCount={state.excelRows.length}
+              onParsed={handleExcelParsed}
+            />
+            <ExportButton state={state} />
+          </aside>
+
+          {/* 우측 미리보기 패널 */}
+          <main className="flex-1 overflow-auto p-6 bg-gray-50 flex flex-col items-center">
+            <p className="text-xs text-muted-foreground mb-4">
+              하단 명패에서 텍스트를 드래그해 위치를 조정하세요 · 상단은 접었을 때 뒷면 미리보기
+            </p>
+            <NameplateCanvas
+              state={state}
+              scale={scale}
+              onMove={moveField}
+              onFieldFocus={setFocusedFieldId}
+            />
+            {state.excelRows.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                미리보기: 첫 번째 행 데이터 · 총 {state.excelRows.length}명
+              </p>
+            )}
+          </main>
+        </div>
+      </div>
+    </>
   )
 }
