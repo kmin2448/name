@@ -17,7 +17,11 @@ describe('nameplateReducer', () => {
   it('ADD_FIELD appends new field with label "새 항목"', () => {
     const next = nameplateReducer(initialState, { type: 'ADD_FIELD' })
     expect(next.fields).toHaveLength(DEFAULT_FIELDS.length + 1)
-    expect(next.fields[next.fields.length - 1].label).toBe('새 항목')
+    const added = next.fields[next.fields.length - 1]
+    expect(added.label).toBe('새 항목')
+    expect(added.widthPct).toBeGreaterThan(0)
+    expect(added.heightPct).toBeGreaterThan(0)
+    expect(added.fontFamily).toBeTruthy()
   })
 
   it('REMOVE_FIELD removes the field by id', () => {
@@ -36,14 +40,25 @@ describe('nameplateReducer', () => {
     expect(found?.fontSize).toBe(30)
   })
 
-  it('MOVE_FIELD clamps position to 0-100', () => {
+  it('MOVE_FIELD clamps position within canvas-minus-box bounds', () => {
     const target = initialState.fields[0]
     const next = nameplateReducer(initialState, {
       type: 'MOVE_FIELD',
       payload: { id: target.id, positionX: 150, positionY: -10 },
     })
     const found = next.fields.find((f) => f.id === target.id)
-    expect(found?.positionX).toBe(100)
+    expect(found?.positionX).toBe(100 - target.widthPct)
     expect(found?.positionY).toBe(0)
+  })
+
+  it('RESIZE_FIELD updates widthPct and heightPct', () => {
+    const target = initialState.fields[0]
+    const next = nameplateReducer(initialState, {
+      type: 'RESIZE_FIELD',
+      payload: { id: target.id, widthPct: 60, heightPct: 30 },
+    })
+    const found = next.fields.find((f) => f.id === target.id)
+    expect(found?.widthPct).toBe(60)
+    expect(found?.heightPct).toBe(30)
   })
 })

@@ -10,9 +10,12 @@ export type TextFieldConfig = {
   label: string
   fontSize: number
   fontWeight: 'normal' | 'bold'
+  fontFamily: string
   textAlign: 'left' | 'center' | 'right'
-  positionX: number
-  positionY: number
+  positionX: number  // % from left edge (top-left of box)
+  positionY: number  // % from top edge (top-left of box)
+  widthPct: number   // box width as % of canvas width
+  heightPct: number  // box height as % of canvas height
   color: string
 }
 

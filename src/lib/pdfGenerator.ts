@@ -25,21 +25,37 @@ function buildHalfElement(
     .join(';')
 
   fields.forEach((field: TextFieldConfig) => {
-    const text = document.createElement('div')
-    text.style.cssText = [
+    const justifyContent =
+      field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
+
+    const box = document.createElement('div')
+    box.style.cssText = [
       `position:absolute`,
       `left:${field.positionX}%`,
       `top:${field.positionY}%`,
-      `transform:translate(-50%,-50%)`,
+      `width:${field.widthPct}%`,
+      `height:${field.heightPct}%`,
+      `display:flex`,
+      `align-items:center`,
+      `justify-content:${justifyContent}`,
+      `overflow:hidden`,
+      `box-sizing:border-box`,
+    ].join(';')
+
+    const text = document.createElement('span')
+    text.style.cssText = [
       `font-size:${field.fontSize}px`,
       `font-weight:${field.fontWeight}`,
+      `font-family:${field.fontFamily}`,
       `text-align:${field.textAlign}`,
       `color:${field.color}`,
       `white-space:nowrap`,
       `line-height:1.2`,
+      `flex-shrink:0`,
     ].join(';')
     text.textContent = rowData[field.label] ?? ''
-    el.appendChild(text)
+    box.appendChild(text)
+    el.appendChild(box)
   })
 
   return el

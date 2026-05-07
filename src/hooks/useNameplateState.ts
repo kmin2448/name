@@ -10,6 +10,7 @@ type Action =
   | { type: 'UPDATE_FIELD'; payload: TextFieldConfig }
   | { type: 'REMOVE_FIELD'; payload: string }
   | { type: 'MOVE_FIELD'; payload: { id: string; positionX: number; positionY: number } }
+  | { type: 'RESIZE_FIELD'; payload: { id: string; widthPct: number; heightPct: number } }
   | { type: 'SET_PREVIEW_DATA'; payload: Record<string, string> }
   | { type: 'SET_EXCEL_ROWS'; payload: Record<string, string>[] }
 
@@ -33,9 +34,12 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
             label: '새 항목',
             fontSize: 14,
             fontWeight: 'normal',
+            fontFamily: '맑은 고딕',
             textAlign: 'center',
-            positionX: 50,
-            positionY: 50,
+            positionX: 10,
+            positionY: 10,
+            widthPct: 50,
+            heightPct: 25,
             color: '#000000',
           },
         ],
@@ -50,15 +54,26 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
     case 'MOVE_FIELD':
       return {
         ...state,
-        fields: state.fields.map((f) =>
-          f.id === action.payload.id
-            ? {
-                ...f,
-                positionX: clamp(action.payload.positionX, 0, 100),
-                positionY: clamp(action.payload.positionY, 0, 100),
-              }
-            : f
-        ),
+        fields: state.fields.map((f) => {
+          if (f.id !== action.payload.id) return f
+          return {
+            ...f,
+            positionX: clamp(action.payload.positionX, 0, 100 - f.widthPct),
+            positionY: clamp(action.payload.positionY, 0, 100 - f.heightPct),
+          }
+        }),
+      }
+    case 'RESIZE_FIELD':
+      return {
+        ...state,
+        fields: state.fields.map((f) => {
+          if (f.id !== action.payload.id) return f
+          return {
+            ...f,
+            widthPct: clamp(action.payload.widthPct, 5, 100 - f.positionX),
+            heightPct: clamp(action.payload.heightPct, 5, 100 - f.positionY),
+          }
+        }),
       }
     case 'SET_PREVIEW_DATA':
       return { ...state, previewData: action.payload }
@@ -90,8 +105,13 @@ export function useNameplateState() {
       dispatch({ type: 'MOVE_FIELD', payload: { id, positionX, positionY } }),
     []
   )
+  const resizeField = useCallback(
+    (id: string, widthPct: number, heightPct: number) =>
+      dispatch({ type: 'RESIZE_FIELD', payload: { id, widthPct, heightPct } }),
+    []
+  )
   const setPreviewData = useCallback((data: Record<string, string>) => dispatch({ type: 'SET_PREVIEW_DATA', payload: data }), [])
   const setExcelRows = useCallback((rows: Record<string, string>[]) => dispatch({ type: 'SET_EXCEL_ROWS', payload: rows }), [])
 
-  return { state, setSize, setBackground, addField, updateField, removeField, moveField, setPreviewData, setExcelRows }
+  return { state, setSize, setBackground, addField, updateField, removeField, moveField, resizeField, setPreviewData, setExcelRows }
 }

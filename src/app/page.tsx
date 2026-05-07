@@ -10,6 +10,11 @@ import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
 import { ExportButton } from '@/components/ExportButton'
 import { ExcelParseResult } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+
+const PREVIEW_MAX_WIDTH = 460
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 3
 
 export default function Home() {
   const {
@@ -20,14 +25,16 @@ export default function Home() {
     updateField,
     removeField,
     moveField,
+    resizeField,
     setPreviewData,
     setExcelRows,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
 
-  const PREVIEW_MAX_WIDTH = 460
-  const scale = Math.min(1, PREVIEW_MAX_WIDTH / (state.size.widthMm * MM_TO_PX))
+  const baseScale = Math.min(1, PREVIEW_MAX_WIDTH / (state.size.widthMm * MM_TO_PX))
+  const scale = baseScale * zoom
 
   const handleExcelParsed = (result: ExcelParseResult) => {
     setExcelRows(result.rows)
@@ -35,6 +42,10 @@ export default function Home() {
       setPreviewData(result.rows[0])
     }
   }
+
+  const handleZoomIn = () => setZoom((v) => Math.min(MAX_ZOOM, parseFloat((v + 0.1).toFixed(1))))
+  const handleZoomOut = () => setZoom((v) => Math.max(MIN_ZOOM, parseFloat((v - 0.1).toFixed(1))))
+  const handleZoomReset = () => setZoom(1)
 
   return (
     <>
@@ -69,15 +80,48 @@ export default function Home() {
 
           {/* 우측 미리보기 패널 */}
           <main className="flex-1 overflow-auto p-6 bg-gray-50 flex flex-col items-center">
-            <p className="text-xs text-muted-foreground mb-4">
-              하단 명패에서 텍스트를 드래그해 위치를 조정하세요 · 상단은 접었을 때 뒷면 미리보기
+            {/* 안내 문구 */}
+            <p className="text-xs text-muted-foreground mb-3">
+              하단 명패에서 텍스트 박스를 드래그해 이동 · 우하단 핸들로 크기 조절
             </p>
+
+            {/* 줌 컨트롤 */}
+            <div className="flex items-center gap-1 mb-4">
+              <button
+                onClick={handleZoomOut}
+                className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                title="축소"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs w-12 text-center tabular-nums text-gray-600 select-none">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={handleZoomIn}
+                className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                title="확대"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleZoomReset}
+                className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                title="원래 크기"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            </div>
+
             <NameplateCanvas
               state={state}
               scale={scale}
+              focusedFieldId={focusedFieldId}
               onMove={moveField}
+              onResize={resizeField}
               onFieldFocus={setFocusedFieldId}
             />
+
             {state.excelRows.length > 0 && (
               <p className="text-xs text-muted-foreground mt-3">
                 미리보기: 첫 번째 행 데이터 · 총 {state.excelRows.length}명
@@ -85,8 +129,8 @@ export default function Home() {
             )}
 
             {/* 인쇄 안내 */}
-            <div className="mt-6 w-full max-w-md rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-              <p className="font-semibold mb-1">🖨️ PDF 인쇄 방법</p>
+            <div className="mt-6 w-full max-w-md px-2 py-2 text-sm text-gray-500">
+              <p className="font-semibold mb-1 text-gray-600">🖨️ PDF 인쇄 방법</p>
               <ul className="space-y-0.5 text-xs list-disc list-inside">
                 <li>배율: <strong>실제 크기(100%)</strong> 또는 <strong>맞춤 페이지 없음</strong> 선택</li>
                 <li>여백: <strong>없음</strong> 또는 최소로 설정</li>

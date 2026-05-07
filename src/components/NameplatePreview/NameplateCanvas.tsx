@@ -18,36 +18,53 @@ function calcSnap(
   rawX: number,
   rawY: number,
   dragId: string,
-  fields: TextFieldConfig[]
+  fields: TextFieldConfig[],
+  widthPct: number,
+  heightPct: number
 ): { x: number; y: number; guides: GuideLine[] } {
   let x = rawX
   let y = rawY
   const guides: GuideLine[] = []
+  const centerX = rawX + widthPct / 2
+  const centerY = rawY + heightPct / 2
 
-  if (Math.abs(rawX - 50) < SNAP_THRESHOLD) {
-    x = 50
+  // Snap center to canvas center
+  if (Math.abs(centerX - 50) < SNAP_THRESHOLD) {
+    x = 50 - widthPct / 2
     guides.push({ type: 'vertical', position: 50, isCenter: true })
   }
-  if (Math.abs(rawY - 50) < SNAP_THRESHOLD) {
-    y = 50
+  if (Math.abs(centerY - 50) < SNAP_THRESHOLD) {
+    y = 50 - heightPct / 2
     guides.push({ type: 'horizontal', position: 50, isCenter: true })
   }
 
   for (const field of fields) {
     if (field.id === dragId) continue
+    const otherCenterX = field.positionX + field.widthPct / 2
+    const otherCenterY = field.positionY + field.heightPct / 2
+
+    // Left edge or center-X alignment
     if (Math.abs(rawX - field.positionX) < SNAP_THRESHOLD) {
       if (x === rawX) x = field.positionX
       guides.push({ type: 'vertical', position: field.positionX, isCenter: false })
+    } else if (Math.abs(centerX - otherCenterX) < SNAP_THRESHOLD) {
+      if (x === rawX) x = otherCenterX - widthPct / 2
+      guides.push({ type: 'vertical', position: otherCenterX, isCenter: false })
     }
+
+    // Top edge or center-Y alignment
     if (Math.abs(rawY - field.positionY) < SNAP_THRESHOLD) {
       if (y === rawY) y = field.positionY
       guides.push({ type: 'horizontal', position: field.positionY, isCenter: false })
+    } else if (Math.abs(centerY - otherCenterY) < SNAP_THRESHOLD) {
+      if (y === rawY) y = otherCenterY - heightPct / 2
+      guides.push({ type: 'horizontal', position: otherCenterY, isCenter: false })
     }
   }
 
   return {
-    x: Math.max(0, Math.min(100, x)),
-    y: Math.max(0, Math.min(100, y)),
+    x: Math.max(0, Math.min(100 - widthPct, x)),
+    y: Math.max(0, Math.min(100 - heightPct, y)),
     guides,
   }
 }
@@ -55,7 +72,6 @@ function calcSnap(
 function HRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
   const mmPx = totalPx / totalMm
   const ticks: React.ReactNode[] = []
-
   for (let mm = 0; mm <= totalMm; mm++) {
     const x = mm * mmPx
     const isMajor = mm % 10 === 0
@@ -65,20 +81,13 @@ function HRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
       <g key={mm}>
         <line x1={x} y1={RULER_SIZE} x2={x} y2={RULER_SIZE - tickH} stroke="#999" strokeWidth={0.5} />
         {isMajor && mm > 0 && (
-          <text x={x} y={RULER_SIZE - 14} textAnchor="middle" fontSize={7} fill="#777">
-            {mm}
-          </text>
+          <text x={x} y={RULER_SIZE - 14} textAnchor="middle" fontSize={7} fill="#777">{mm}</text>
         )}
       </g>
     )
   }
-
   return (
-    <svg
-      width={totalPx}
-      height={RULER_SIZE}
-      style={{ display: 'block', background: '#f6f6f6', borderBottom: '1px solid #d1d5db' }}
-    >
+    <svg width={totalPx} height={RULER_SIZE} style={{ display: 'block', background: '#f6f6f6', borderBottom: '1px solid #d1d5db' }}>
       {ticks}
     </svg>
   )
@@ -87,7 +96,6 @@ function HRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
 function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
   const mmPx = totalPx / totalMm
   const ticks: React.ReactNode[] = []
-
   for (let mm = 0; mm <= totalMm; mm++) {
     const y = mm * mmPx
     const isMajor = mm % 10 === 0
@@ -97,55 +105,67 @@ function VRuler({ totalPx, totalMm }: { totalPx: number; totalMm: number }) {
       <g key={mm}>
         <line x1={RULER_SIZE} y1={y} x2={RULER_SIZE - tickW} y2={y} stroke="#999" strokeWidth={0.5} />
         {isMajor && mm > 0 && (
-          <text x={RULER_SIZE / 2} y={y + 3} textAnchor="middle" fontSize={7} fill="#777">
-            {mm}
-          </text>
+          <text x={RULER_SIZE / 2} y={y + 3} textAnchor="middle" fontSize={7} fill="#777">{mm}</text>
         )}
       </g>
     )
   }
-
   return (
-    <svg
-      width={RULER_SIZE}
-      height={totalPx}
-      style={{ display: 'block', background: '#f6f6f6', borderRight: '1px solid #d1d5db' }}
-    >
+    <svg width={RULER_SIZE} height={totalPx} style={{ display: 'block', background: '#f6f6f6', borderRight: '1px solid #d1d5db' }}>
       {ticks}
     </svg>
   )
 }
 
 function renderStaticFields(fields: TextFieldConfig[], data: Record<string, string>) {
-  return fields.map((field) => (
-    <div
-      key={field.id}
-      style={{
-        position: 'absolute',
-        left: `${field.positionX}%`,
-        top: `${field.positionY}%`,
-        transform: 'translate(-50%, -50%)',
-        fontSize: `${field.fontSize}px`,
-        fontWeight: field.fontWeight,
-        textAlign: field.textAlign,
-        color: field.color,
-        whiteSpace: 'nowrap',
-        lineHeight: 1.2,
-      }}
-    >
-      {data[field.label] ?? `[${field.label}]`}
-    </div>
-  ))
+  return fields.map((field) => {
+    const justifyContent =
+      field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
+    return (
+      <div
+        key={field.id}
+        style={{
+          position: 'absolute',
+          left: `${field.positionX}%`,
+          top: `${field.positionY}%`,
+          width: `${field.widthPct}%`,
+          height: `${field.heightPct}%`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent,
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+        }}
+      >
+        <span
+          style={{
+            fontSize: `${field.fontSize}px`,
+            fontWeight: field.fontWeight,
+            fontFamily: field.fontFamily,
+            textAlign: field.textAlign,
+            color: field.color,
+            whiteSpace: 'nowrap',
+            lineHeight: 1.2,
+            flexShrink: 0,
+          }}
+        >
+          {data[field.label] ?? `[${field.label}]`}
+        </span>
+      </div>
+    )
+  })
 }
 
 type Props = {
   state: NameplateState
   scale: number
+  focusedFieldId: string | null
   onMove: (id: string, positionX: number, positionY: number) => void
+  onResize: (id: string, widthPct: number, heightPct: number) => void
   onFieldFocus: (id: string) => void
 }
 
-export function NameplateCanvas({ state, scale, onMove, onFieldFocus }: Props) {
+export function NameplateCanvas({ state, scale, focusedFieldId, onMove, onResize, onFieldFocus }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [showRuler, setShowRuler] = useState(false)
   const [guides, setGuides] = useState<GuideLine[]>([])
@@ -158,16 +178,16 @@ export function NameplateCanvas({ state, scale, onMove, onFieldFocus }: Props) {
 
   const handleMove = useCallback(
     (id: string, rawX: number, rawY: number) => {
-      const { x, y, guides: newGuides } = calcSnap(rawX, rawY, id, fields)
+      const field = fields.find((f) => f.id === id)
+      if (!field) return
+      const { x, y, guides: newGuides } = calcSnap(rawX, rawY, id, fields, field.widthPct, field.heightPct)
       setGuides(newGuides)
       onMove(id, x, y)
     },
     [fields, onMove]
   )
 
-  const handleDragEnd = useCallback(() => {
-    setGuides([])
-  }, [])
+  const handleDragEnd = useCallback(() => setGuides([]), [])
 
   const bgStyle: React.CSSProperties = {
     backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
@@ -202,61 +222,39 @@ export function NameplateCanvas({ state, scale, onMove, onFieldFocus }: Props) {
         </button>
       </div>
 
-      {/* Canvas + rulers layout */}
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
         {/* Left: corner spacer + vertical ruler beside bottom half */}
         {showRuler && (
           <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-            {/* Corner block + spacer beside top half */}
-            <div
-              style={{
-                width: RULER_SIZE,
-                height: RULER_SIZE + scaledHeight,
-                background: '#f6f6f6',
-                borderRight: '1px solid #d1d5db',
-              }}
-            />
-            {/* Vertical ruler aligned with bottom (interactive) half */}
+            <div style={{ width: RULER_SIZE, height: RULER_SIZE + scaledHeight, background: '#f6f6f6', borderRight: '1px solid #d1d5db' }} />
             <VRuler totalPx={scaledHeight} totalMm={size.heightMm} />
           </div>
         )}
 
-        {/* Right: horizontal ruler + canvas */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {showRuler && <HRuler totalPx={scaledWidth} totalMm={size.widthMm} />}
 
           {/* Canvas container */}
-          <div
-            style={{
-              width: scaledWidth,
-              height: scaledHeight * 2,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          <div style={{ width: scaledWidth, height: scaledHeight * 2, position: 'relative', overflow: 'hidden' }}>
             <div
               id="nameplate-export-container"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                transformOrigin: 'top left',
-                transform: `scale(${scale})`,
-              }}
+              style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}
             >
-              {/* Top half: 180° rotated — printed back face */}
+              {/* Top half: rotated */}
               <div style={{ ...halfStyle, transform: 'rotate(180deg)' }}>
                 {renderStaticFields(fields, previewData)}
               </div>
 
-              {/* Bottom half: interactive front face */}
+              {/* Bottom half: interactive */}
               <div ref={bottomRef} style={halfStyle}>
                 {fields.map((field) => (
                   <DraggableTextField
                     key={field.id}
                     field={field}
                     value={previewData[field.label] ?? ''}
+                    isFocused={focusedFieldId === field.id}
                     onMove={handleMove}
+                    onResize={onResize}
                     onFocus={onFieldFocus}
                     onDragEnd={handleDragEnd}
                     containerRef={bottomRef as React.RefObject<HTMLDivElement>}
@@ -265,19 +263,9 @@ export function NameplateCanvas({ state, scale, onMove, onFieldFocus }: Props) {
               </div>
             </div>
 
-            {/* Guide overlay — at scaled coordinates, outside the CSS-scaled container so lines stay 1px */}
+            {/* Guide overlay at scaled coordinates, outside the CSS-scaled container */}
             {guides.length > 0 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: scaledHeight,
-                  width: scaledWidth,
-                  height: scaledHeight,
-                  pointerEvents: 'none',
-                  zIndex: 10,
-                }}
-              >
+              <div style={{ position: 'absolute', left: 0, top: scaledHeight, width: scaledWidth, height: scaledHeight, pointerEvents: 'none', zIndex: 10 }}>
                 {guides.map((guide, i) =>
                   guide.type === 'vertical' ? (
                     <div
@@ -291,21 +279,7 @@ export function NameplateCanvas({ state, scale, onMove, onFieldFocus }: Props) {
                         background: guide.isCenter ? '#ef4444' : '#f97316',
                       }}
                     >
-                      <span
-                        style={{
-                          position: 'absolute',
-                          top: 3,
-                          left: 3,
-                          fontSize: 9,
-                          fontFamily: 'monospace',
-                          color: guide.isCenter ? '#ef4444' : '#ea580c',
-                          background: 'rgba(255,255,255,0.88)',
-                          padding: '0 2px',
-                          borderRadius: 2,
-                          whiteSpace: 'nowrap',
-                          lineHeight: 1.5,
-                        }}
-                      >
+                      <span style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontFamily: 'monospace', color: guide.isCenter ? '#ef4444' : '#ea580c', background: 'rgba(255,255,255,0.88)', padding: '0 2px', borderRadius: 2, whiteSpace: 'nowrap', lineHeight: 1.5 }}>
                         {((guide.position / 100) * size.widthMm).toFixed(1)}
                       </span>
                     </div>
@@ -321,21 +295,7 @@ export function NameplateCanvas({ state, scale, onMove, onFieldFocus }: Props) {
                         background: guide.isCenter ? '#ef4444' : '#f97316',
                       }}
                     >
-                      <span
-                        style={{
-                          position: 'absolute',
-                          top: 3,
-                          left: 3,
-                          fontSize: 9,
-                          fontFamily: 'monospace',
-                          color: guide.isCenter ? '#ef4444' : '#ea580c',
-                          background: 'rgba(255,255,255,0.88)',
-                          padding: '0 2px',
-                          borderRadius: 2,
-                          whiteSpace: 'nowrap',
-                          lineHeight: 1.5,
-                        }}
-                      >
+                      <span style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontFamily: 'monospace', color: guide.isCenter ? '#ef4444' : '#ea580c', background: 'rgba(255,255,255,0.88)', padding: '0 2px', borderRadius: 2, whiteSpace: 'nowrap', lineHeight: 1.5 }}>
                         {((guide.position / 100) * size.heightMm).toFixed(1)}
                       </span>
                     </div>

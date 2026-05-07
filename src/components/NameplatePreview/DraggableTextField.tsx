@@ -5,35 +5,43 @@ import { TextFieldConfig } from '@/types/nameplate'
 type Props = {
   field: TextFieldConfig
   value: string
+  isFocused: boolean
   onMove: (id: string, positionX: number, positionY: number) => void
+  onResize: (id: string, widthPct: number, heightPct: number) => void
   onFocus: (id: string) => void
   onDragEnd?: () => void
   containerRef: React.RefObject<HTMLDivElement>
 }
 
-export function DraggableTextField({ field, value, onMove, onFocus, onDragEnd, containerRef }: Props) {
+export function DraggableTextField({
+  field, value, isFocused, onMove, onResize, onFocus, onDragEnd, containerRef,
+}: Props) {
   const isDragging = useRef(false)
-  const dragStart = useRef({ mouseX: 0, mouseY: 0, fieldX: 0, fieldY: 0 })
+  const isResizing = useRef(false)
+  const startRef = useRef({ mouseX: 0, mouseY: 0, startX: 0, startY: 0, startW: 0, startH: 0 })
 
-  const handleMouseDown = useCallback(
+  const handleDragMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
+      e.stopPropagation()
       onFocus(field.id)
       isDragging.current = true
-      dragStart.current = {
+      startRef.current = {
         mouseX: e.clientX,
         mouseY: e.clientY,
-        fieldX: field.positionX,
-        fieldY: field.positionY,
+        startX: field.positionX,
+        startY: field.positionY,
+        startW: field.widthPct,
+        startH: field.heightPct,
       }
 
       const handleMouseMove = (ev: MouseEvent) => {
         if (!isDragging.current || !containerRef.current) return
         const rect = containerRef.current.getBoundingClientRect()
-        const deltaX = ev.clientX - dragStart.current.mouseX
-        const deltaY = ev.clientY - dragStart.current.mouseY
-        const newX = dragStart.current.fieldX + (deltaX / rect.width) * 100
-        const newY = dragStart.current.fieldY + (deltaY / rect.height) * 100
+        const dx = ((ev.clientX - startRef.current.mouseX) / rect.width) * 100
+        const dy = ((ev.clientY - startRef.current.mouseY) / rect.height) * 100
+        const newX = Math.max(0, Math.min(100 - startRef.current.startW, startRef.current.startX + dx))
+        const newY = Math.max(0, Math.min(100 - startRef.current.startH, startRef.current.startY + dy))
         onMove(field.id, newX, newY)
       }
 
@@ -47,28 +55,101 @@ export function DraggableTextField({ field, value, onMove, onFocus, onDragEnd, c
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [field.id, field.positionX, field.positionY, onMove, onFocus, onDragEnd, containerRef]
+    [field.id, field.positionX, field.positionY, field.widthPct, field.heightPct, onMove, onFocus, onDragEnd, containerRef]
   )
+
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      isResizing.current = true
+      startRef.current = {
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+        startX: field.positionX,
+        startY: field.positionY,
+        startW: field.widthPct,
+        startH: field.heightPct,
+      }
+
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (!isResizing.current || !containerRef.current) return
+        const rect = containerRef.current.getBoundingClientRect()
+        const dw = ((ev.clientX - startRef.current.mouseX) / rect.width) * 100
+        const dh = ((ev.clientY - startRef.current.mouseY) / rect.height) * 100
+        const newW = Math.max(5, Math.min(100 - startRef.current.startX, startRef.current.startW + dw))
+        const newH = Math.max(5, Math.min(100 - startRef.current.startY, startRef.current.startH + dh))
+        onResize(field.id, newW, newH)
+      }
+
+      const handleMouseUp = () => {
+        isResizing.current = false
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    },
+    [field.id, field.positionX, field.positionY, field.widthPct, field.heightPct, onResize, containerRef]
+  )
+
+  const justifyContent =
+    field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
 
   return (
     <div
-      onMouseDown={handleMouseDown}
+      onMouseDown={handleDragMouseDown}
       style={{
         position: 'absolute',
         left: `${field.positionX}%`,
         top: `${field.positionY}%`,
-        transform: 'translate(-50%, -50%)',
-        fontSize: `${field.fontSize}px`,
-        fontWeight: field.fontWeight,
-        textAlign: field.textAlign,
-        color: field.color,
+        width: `${field.widthPct}%`,
+        height: `${field.heightPct}%`,
         cursor: 'move',
+        boxSizing: 'border-box',
+        border: isFocused
+          ? '1.5px dashed #1F5C99'
+          : '1px dashed rgba(31, 92, 153, 0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent,
+        overflow: 'hidden',
         userSelect: 'none',
-        whiteSpace: 'nowrap',
-        lineHeight: 1.2,
       }}
     >
-      {value || `[${field.label}]`}
+      <span
+        style={{
+          fontSize: `${field.fontSize}px`,
+          fontWeight: field.fontWeight,
+          fontFamily: field.fontFamily,
+          textAlign: field.textAlign,
+          color: field.color,
+          whiteSpace: 'nowrap',
+          lineHeight: 1.2,
+          pointerEvents: 'none',
+          flexShrink: 0,
+        }}
+      >
+        {value || `[${field.label}]`}
+      </span>
+
+      {isFocused && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          style={{
+            position: 'absolute',
+            bottom: -4,
+            right: -4,
+            width: 9,
+            height: 9,
+            background: '#1F5C99',
+            cursor: 'nwse-resize',
+            borderRadius: 2,
+            zIndex: 1,
+          }}
+        />
+      )}
     </div>
   )
 }
