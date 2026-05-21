@@ -10,12 +10,22 @@ export function usePdfExport() {
   const exportPdf = useCallback(async (state: NameplateState) => {
     setIsExporting(true)
     try {
-      await generatePdf(state, (current, total) => setProgress({ current, total }))
+      await generatePdf(state, (current, total) => setProgress({ current, total }), 'download')
     } finally {
       setIsExporting(false)
       setProgress({ current: 0, total: 0 })
     }
   }, [])
 
-  return { exportPdf, isExporting, progress }
+  const previewPdf = useCallback(async (state: NameplateState) => {
+    setIsExporting(true)
+    try {
+      await generatePdf(state, (current, total) => setProgress({ current, total }), 'preview')
+    } finally {
+      setIsExporting(false)
+      setProgress({ current: 0, total: 0 })
+    }
+  }, [])
+
+  return { exportPdf, previewPdf, isExporting, progress }
 }

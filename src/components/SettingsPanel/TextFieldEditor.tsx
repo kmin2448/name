@@ -83,9 +83,10 @@ type Props = {
   onUpdate: (field: TextFieldConfig) => void
   onRemove: (id: string) => void
   onAdd: () => void
+  onFocus?: (id: string) => void
 }
 
-export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }: Props) {
+export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, onFocus }: Props) {
   const fonts = useLocalFonts()
   const [open, setOpen] = useState(true)
 
@@ -112,7 +113,8 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd }
       {open && fields.map((field) => (
         <Card
           key={field.id}
-          className={`transition-shadow ${focusedId === field.id ? 'ring-2 ring-[#475569]' : ''}`}
+          onClick={() => onFocus?.(field.id)}
+          className={`transition-shadow cursor-pointer ${focusedId === field.id ? 'ring-2 ring-[#475569]' : 'hover:ring-1 hover:ring-gray-300'}`}
         >
           <CardHeader className="py-2 px-3 pb-0">
             <div className="flex items-center gap-2">

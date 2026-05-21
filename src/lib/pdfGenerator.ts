@@ -151,7 +151,8 @@ function getPageLayout(widthMm: number): {
 
 export async function generatePdf(
   state: NameplateState,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  mode: 'download' | 'preview' = 'download'
 ): Promise<void> {
   const rows = state.excelRows.length > 0 ? state.excelRows : [state.previewData]
   const { size } = state
@@ -201,5 +202,11 @@ export async function generatePdf(
     document.body.removeChild(wrapper)
   }
 
-  pdf.save('명패_일괄출력.pdf')
+  if (mode === 'preview') {
+    const blob = pdf.output('blob')
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  } else {
+    pdf.save('명패_일괄출력.pdf')
+  }
 }
