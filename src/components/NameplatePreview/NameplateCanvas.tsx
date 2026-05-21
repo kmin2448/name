@@ -244,11 +244,11 @@ export function NameplateCanvas({
 
   return (
     <div>
-      {/* A4 page wrapper */}
+      {/* A4 page wrapper — 명패 외 영역은 50% 투명으로 표시 */}
       <div style={{
         width: a4WPx,
         height: a4HPx,
-        background: 'white',
+        background: 'rgba(255,255,255,0.5)',
         boxShadow: '0 2px 14px rgba(0,0,0,0.18)',
         position: 'relative',
         flexShrink: 0,
