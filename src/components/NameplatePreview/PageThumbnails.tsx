@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useRef, useState, useEffect } from 'react'
 import { TextFieldConfig, NameplateSize, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
@@ -28,15 +28,6 @@ function getEffectiveFields(
   return globalFields.map((f) => overrides[f.id] ?? f)
 }
 
-function getLabel(row: Record<string, string>, fields: TextFieldConfig[]): string {
-  const nameField = fields.find((f) => f.label === '이름')
-  if (nameField && row[nameField.label]) return row[nameField.label]
-  for (const field of fields) {
-    if (row[field.label]) return row[field.label]
-  }
-  return '—'
-}
-
 function ThumbnailFace({
   row, fields, size, backgroundImage, overlayImages, layers, thumbWidth,
 }: {
@@ -62,7 +53,11 @@ function ThumbnailFace({
 
   return (
     <div style={{ width: thumbWidth, height: thumbH, position: 'relative', overflow: 'hidden', ...bgStyle }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})`, width: widthPx, height: heightPx }}>
+      <div style={{
+        position: 'absolute', top: 0, left: 0,
+        transformOrigin: 'top left', transform: `scale(${scale})`,
+        width: widthPx, height: heightPx,
+      }}>
         {renderItemsStatic(layers, fields, overlayImages, row)}
       </div>
     </div>
@@ -101,15 +96,23 @@ export function PageThumbnails({
           {visible.map((row, i) => {
             const effectiveFields = getEffectiveFields(fields, pageFieldOverrides[i])
             const hasOverride = !!pageFieldOverrides[i] && Object.keys(pageFieldOverrides[i]).length > 0
+            const isSelected = selectedIndex === i
+
+            let outlineStyle: string
+            if (isSelected) {
+              outlineStyle = '2.5px solid #475569'
+            } else if (hasOverride) {
+              outlineStyle = '2px solid #f97316'
+            } else {
+              outlineStyle = '1.5px solid #e5e7eb'
+            }
+
             return (
               <div
                 key={i}
                 onClick={() => onSelect(i)}
                 className="cursor-pointer rounded overflow-hidden transition-all"
-                style={{
-                  outline: selectedIndex === i ? '2.5px solid #475569' : '1.5px solid #e5e7eb',
-                  outlineOffset: 1,
-                }}
+                style={{ outline: outlineStyle, outlineOffset: 1 }}
               >
                 <ThumbnailFace
                   row={row}
@@ -120,15 +123,6 @@ export function PageThumbnails({
                   layers={layers}
                   thumbWidth={thumbWidth}
                 />
-                <div
-                  className="text-center bg-white border-t border-gray-100 text-gray-500 flex items-center justify-center gap-1"
-                  style={{ fontSize: 9, padding: '2px 4px', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
-                >
-                  {hasOverride && (
-                    <span style={{ fontSize: 8, background: '#f97316', color: '#fff', borderRadius: 2, padding: '0 2px', lineHeight: 1.6, flexShrink: 0 }}>커스텀</span>
-                  )}
-                  {i + 1}. {getLabel(row, effectiveFields)}
-                </div>
               </div>
             )
           })}

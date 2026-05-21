@@ -46,7 +46,14 @@ const TIPS = [
   '오버레이 이미지를 클릭해 선택한 뒤 Shift를 누르면 자르기 핸들이 주황색으로 나타납니다. 핸들을 드래그해 필요한 부분만 표시하세요.',
   '레이어 순서에서 이미지를 텍스트 위로 올리면 텍스트 위에 이미지를 배치할 수도 있습니다.',
   '썸네일에 주황색 "커스텀" 배지가 붙은 페이지는 개별 서식이 적용된 상태입니다.',
-  '미리보기 우측 상단의 눈금자 버튼을 켜면 mm 단위 위치를 확인할 수 있습니다.',
+  '캔버스에서 텍스트를 한 번 클릭해 선택한 뒤, 다시 클릭하면 직접 텍스트를 편집할 수 있습니다. Esc로 편집 종료.',
+]
+
+const PRINT_TIPS = [
+  '배율: 실제 크기(100%) 또는 맞춤 페이지 없음 선택',
+  '여백: 없음 또는 최소로 설정',
+  '용지 크기: A4',
+  '단면 인쇄 후 접어서 사용',
 ]
 
 export function HelpPanel() {
@@ -119,6 +126,22 @@ export function HelpPanel() {
             <p className="text-xs font-bold text-gray-700 mb-2.5">💡 알아두면 좋은 점</p>
             <ul className="space-y-2">
               {TIPS.map((tip, i) => (
+                <li key={i} className="flex gap-2 text-[11px] text-gray-500 leading-relaxed">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* 구분선 */}
+          <hr className="my-5 border-gray-100" />
+
+          {/* PDF 인쇄 방법 */}
+          <div>
+            <p className="text-xs font-bold text-gray-700 mb-2.5">🖨️ PDF 인쇄 방법</p>
+            <ul className="space-y-1.5">
+              {PRINT_TIPS.map((tip, i) => (
                 <li key={i} className="flex gap-2 text-[11px] text-gray-500 leading-relaxed">
                   <span className="text-[#475569] shrink-0">•</span>
                   <span>{tip}</span>

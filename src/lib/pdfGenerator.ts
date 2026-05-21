@@ -69,17 +69,15 @@ function buildHalfElement(
 
       const text = document.createElement('span')
       text.style.cssText = [
+        `display:block`,
+        `width:100%`,
         `font-size:${field.fontSize}px`,
         `font-weight:${field.fontWeight}`,
         `font-family:${field.fontFamily}`,
         `text-align:${field.textAlign}`,
         `color:${field.color}`,
-        `white-space:nowrap`,
-        // line-height:1 instead of 1.2 minimises the vertical extent
-        // of the inline box, reducing clipping risk at box edges.
+        `white-space:pre-line`,
         `line-height:1`,
-        `flex-shrink:0`,
-        `display:block`,
       ].join(';')
       text.textContent = rowData[field.label] ?? ''
       box.appendChild(text)
