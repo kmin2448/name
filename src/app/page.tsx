@@ -55,6 +55,7 @@ export default function Home() {
     setShowBorder,
     resetFields,
     saveAsDefault,
+    applyFieldsToAll,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -294,6 +295,7 @@ export default function Home() {
         onClearPageOverride={() => clearPageFieldOverride(selectedRowIndex)}
         onToggleBorder={() => setShowBorder(!state.showBorder)}
         onSelect={handleThumbnailSelect}
+        onApplyCurrentPageToAll={() => applyFieldsToAll(effectiveFields)}
       />
       <div className="h-screen flex flex-col">
         <header className="bg-[#475569] text-white shrink-0 flex items-center gap-1.5 px-4 py-2 overflow-x-auto">

@@ -47,6 +47,7 @@ type Action =
   | { type: 'SET_LAYERS'; payload: string[] }
   | { type: 'SET_SHOW_BORDER'; payload: boolean }
   | { type: 'RESET_FIELDS'; payload: TextFieldConfig[] }
+  | { type: 'APPLY_FIELDS_TO_ALL'; payload: TextFieldConfig[] }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -238,6 +239,20 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
     case 'SET_SHOW_BORDER':
       return { ...state, showBorder: action.payload }
 
+    case 'APPLY_FIELDS_TO_ALL': {
+      const newFields = action.payload
+      const newFieldIds = newFields.map((f) => f.id)
+      const overlayIds = state.overlayImages.map((o) => o.id)
+      const preserved = state.layers.filter((id) => newFieldIds.includes(id) || overlayIds.includes(id))
+      const added = newFieldIds.filter((id) => !preserved.includes(id))
+      return {
+        ...state,
+        fields: newFields,
+        layers: [...added, ...preserved],
+        pageFieldOverrides: {},
+      }
+    }
+
     case 'RESET_FIELDS': {
       const targetFields = action.payload
       const overlayIds = state.overlayImages.map((o) => o.id)
@@ -337,6 +352,11 @@ export function useNameplateState() {
     (v: boolean) => dispatch({ type: 'SET_SHOW_BORDER', payload: v }),
     []
   )
+  const applyFieldsToAll = useCallback(
+    (fields: TextFieldConfig[]) => dispatch({ type: 'APPLY_FIELDS_TO_ALL', payload: fields }),
+    []
+  )
+
   const resetFields = useCallback(() => {
     const defaults = loadCustomDefaultFields() ?? DEFAULT_FIELDS
     dispatch({ type: 'RESET_FIELDS', payload: defaults })
@@ -352,6 +372,6 @@ export function useNameplateState() {
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
-    moveLayer, setLayers, setShowBorder, resetFields, saveAsDefault,
+    moveLayer, setLayers, setShowBorder, resetFields, saveAsDefault, applyFieldsToAll,
   }
 }

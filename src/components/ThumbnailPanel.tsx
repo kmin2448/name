@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { LayoutGrid, X, Square } from 'lucide-react'
+import { LayoutGrid, X, Square, ChevronsRight } from 'lucide-react'
 import { NameplateState } from '@/types/nameplate'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 
@@ -16,6 +16,7 @@ type Props = {
   onClearPageOverride: () => void
   onToggleBorder: () => void
   onSelect: (index: number) => void
+  onApplyCurrentPageToAll: () => void
 }
 
 export function ThumbnailPanel({
@@ -28,6 +29,7 @@ export function ThumbnailPanel({
   onClearPageOverride,
   onToggleBorder,
   onSelect,
+  onApplyCurrentPageToAll,
 }: Props) {
   const [open, setOpen] = useState(false)
   const hasData = state.excelRows.length > 0
@@ -141,6 +143,18 @@ export function ThumbnailPanel({
                   <p className="text-xs text-orange-500 mb-2">
                     ⚠ 전체 {state.excelRows.length}개 페이지에 동일하게 적용됩니다
                   </p>
+                )}
+
+                {/* 이 페이지만 모드일 때: 전체 적용하기 버튼 */}
+                {!applyToAll && (
+                  <button
+                    onClick={onApplyCurrentPageToAll}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs py-1 mb-2 rounded bg-[#475569] text-white hover:bg-[#334155] active:bg-[#1e293b] transition-colors"
+                    title={`${selectedRowIndex + 1}번 페이지의 서식을 전체 ${state.excelRows.length}개 페이지에 적용합니다`}
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                    이 페이지 설정을 전체에 적용
+                  </button>
                 )}
 
                 <div className="flex flex-col gap-1.5">
