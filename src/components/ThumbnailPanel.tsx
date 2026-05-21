@@ -42,7 +42,7 @@ export function ThumbnailPanel({
         className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
         style={{
           right: open ? PANEL_WIDTH : 0,
-          top: '35%',
+          top: '25%',
           transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}
@@ -65,7 +65,7 @@ export function ThumbnailPanel({
 
       {/* 슬라이드 패널 */}
       <div
-        className="fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-40 overflow-y-auto"
+        className="fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-[35] overflow-y-auto"
         style={{
           width: PANEL_WIDTH,
           transform: open ? 'translateX(0)' : 'translateX(100%)',

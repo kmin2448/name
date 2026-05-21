@@ -222,7 +222,18 @@ export default function Home() {
   // ── Pan (Space + drag) — transform 기반으로 캔버스 자체를 이동 ────────
   const [isPanMode, setIsPanMode] = useState(false)
   const [isPanDragging, setIsPanDragging] = useState(false)
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 })
+  const [canvasOffset, setCanvasOffset] = useState<{ x: number; y: number }>(() => {
+    try {
+      const stored = localStorage.getItem('nameplate_canvas_offset')
+      return stored ? (JSON.parse(stored) as { x: number; y: number }) : { x: 0, y: 0 }
+    } catch {
+      return { x: 0, y: 0 }
+    }
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem('nameplate_canvas_offset', JSON.stringify(canvasOffset)) } catch { /* ignore */ }
+  }, [canvasOffset])
   const panStart = useRef<{ mouseX: number; mouseY: number; canvasX: number; canvasY: number } | null>(null)
 
   useEffect(() => {
