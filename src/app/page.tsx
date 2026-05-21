@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { useNameplateState } from '@/hooks/useNameplateState'
 import { SizeSelector } from '@/components/SettingsPanel/SizeSelector'
@@ -161,6 +161,59 @@ export default function Home() {
     setFocusedOverlayId(null)
   }, [])
 
+  // ── Pan (Space + drag) ───────────────────────────────────────────────
+  const canvasRef = useRef<HTMLElement>(null)
+  const [isPanMode, setIsPanMode] = useState(false)
+  const [isPanDragging, setIsPanDragging] = useState(false)
+  const panStart = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || e.repeat) return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      e.preventDefault()
+      setIsPanMode(true)
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return
+      setIsPanMode(false)
+      setIsPanDragging(false)
+      panStart.current = null
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
+
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (!isPanMode || !canvasRef.current) return
+    e.preventDefault()
+    setIsPanDragging(true)
+    panStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: canvasRef.current.scrollLeft,
+      scrollTop: canvasRef.current.scrollTop,
+    }
+  }, [isPanMode])
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (!isPanDragging || !panStart.current || !canvasRef.current) return
+    const dx = e.clientX - panStart.current.x
+    const dy = e.clientY - panStart.current.y
+    canvasRef.current.scrollLeft = panStart.current.scrollLeft - dx
+    canvasRef.current.scrollTop = panStart.current.scrollTop - dy
+  }, [isPanDragging])
+
+  const handleCanvasMouseUp = useCallback(() => {
+    setIsPanDragging(false)
+    panStart.current = null
+  }, [])
+
   // ── Zoom ──────────────────────────────────────────────────────────────
   const handleZoomIn = () => setZoom((v) => Math.min(MAX_ZOOM, parseFloat((v + 0.1).toFixed(1))))
   const handleZoomOut = () => setZoom((v) => Math.max(MIN_ZOOM, parseFloat((v - 0.1).toFixed(1))))
@@ -241,9 +294,20 @@ export default function Home() {
           </aside>
 
           {/* ── 중앙 편집 캔버스 (A4) ── */}
-          <main className="flex-1 overflow-auto p-6 bg-gray-300 flex flex-col items-center">
+          <main
+            ref={canvasRef}
+            className="flex-1 overflow-auto p-6 bg-gray-300 flex flex-col items-center"
+            style={{
+              cursor: isPanMode ? (isPanDragging ? 'grabbing' : 'grab') : undefined,
+              userSelect: isPanMode ? 'none' : undefined,
+            }}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+          >
             <p className="text-xs text-gray-500 mb-3 text-center">
-              드래그: 이동 · 우하단 핸들: 크기 조절 · 선택 후 다시 클릭: 텍스트 직접 편집 · <kbd className="bg-gray-200 px-1 rounded">Esc</kbd>: 편집 종료 · <kbd className="bg-gray-200 px-1 rounded">Shift</kbd>+이미지: 자르기
+              드래그: 이동 · 핸들: 크기 조절 · 선택 후 다시 클릭: 텍스트 편집 · <kbd className="bg-gray-200 px-1 rounded">Esc</kbd>: 종료 · <kbd className="bg-gray-200 px-1 rounded">Shift</kbd>+이미지: 자르기 · <kbd className="bg-gray-200 px-1 rounded">Space</kbd>: 화면 이동
             </p>
 
             {/* 줌 컨트롤 */}
@@ -262,22 +326,25 @@ export default function Home() {
               </button>
             </div>
 
-            <NameplateCanvas
-              state={state}
-              overrideFields={effectiveFields}
-              scale={scale}
-              focusedFieldId={focusedFieldId}
-              focusedOverlayId={focusedOverlayId}
-              onMove={handleMoveField}
-              onResize={handleResizeField}
-              onFieldFocus={handleFieldFocus}
-              onOverlayFocus={handleOverlayFocus}
-              onOverlayMove={handleOverlayMove}
-              onOverlayResize={handleOverlayResize}
-              onOverlayCrop={handleOverlayCrop}
-              onDeselect={handleDeselect}
-              onValueChange={selectedRowIndex >= 0 ? handleRowFieldChange : undefined}
-            />
+            {/* Space 패닝 중에는 캔버스 요소의 포인터 이벤트를 차단해 드래그 충돌 방지 */}
+            <div style={{ pointerEvents: isPanMode ? 'none' : 'auto' }}>
+              <NameplateCanvas
+                state={state}
+                overrideFields={effectiveFields}
+                scale={scale}
+                focusedFieldId={focusedFieldId}
+                focusedOverlayId={focusedOverlayId}
+                onMove={handleMoveField}
+                onResize={handleResizeField}
+                onFieldFocus={handleFieldFocus}
+                onOverlayFocus={handleOverlayFocus}
+                onOverlayMove={handleOverlayMove}
+                onOverlayResize={handleOverlayResize}
+                onOverlayCrop={handleOverlayCrop}
+                onDeselect={handleDeselect}
+                onValueChange={selectedRowIndex >= 0 ? handleRowFieldChange : undefined}
+              />
+            </div>
 
           </main>
 
