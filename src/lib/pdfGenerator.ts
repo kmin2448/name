@@ -46,13 +46,7 @@ function buildHalfElement(
   effectiveLayers.forEach((id) => {
     const field = fields.find((f) => f.id === id)
     if (field) {
-      const justifyContent =
-        field.textAlign === 'center' ? 'center' : field.textAlign === 'right' ? 'flex-end' : 'flex-start'
-
       const box = document.createElement('div')
-      // Use overflow:visible so text that slightly exceeds the bounding box
-      // (due to font ascender/descender metrics) is not hard-clipped.
-      // A small vertical padding provides an additional safety margin.
       box.style.cssText = [
         `position:absolute`,
         `left:${field.positionX}%`,
@@ -61,10 +55,8 @@ function buildHalfElement(
         `height:${field.heightPct}%`,
         `display:flex`,
         `align-items:center`,
-        `justify-content:${justifyContent}`,
-        `overflow:visible`,
+        `overflow:hidden`,
         `box-sizing:border-box`,
-        `padding:0 2px`,
       ].join(';')
 
       const text = document.createElement('span')
@@ -77,7 +69,7 @@ function buildHalfElement(
         `text-align:${field.textAlign}`,
         `color:${field.color}`,
         `white-space:pre-line`,
-        `line-height:1`,
+        `line-height:1.2`,
       ].join(';')
       text.textContent = rowData[field.label] ?? ''
       box.appendChild(text)
