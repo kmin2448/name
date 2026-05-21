@@ -1,19 +1,20 @@
 'use client'
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
+import * as XLSX from 'xlsx'
 import { useNameplateState } from '@/hooks/useNameplateState'
+import { usePdfExport } from '@/hooks/usePdfExport'
 import { SizeSelector } from '@/components/SettingsPanel/SizeSelector'
 import { ImagePanel } from '@/components/SettingsPanel/ImagePanel'
 import { TextFieldEditor } from '@/components/SettingsPanel/TextFieldEditor'
-import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
 import { LayerPanel } from '@/components/SettingsPanel/LayerPanel'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
-import { ExportButton } from '@/components/ExportButton'
 import { HelpPanel } from '@/components/HelpPanel'
 import { ThumbnailPanel } from '@/components/ThumbnailPanel'
+import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { ZoomIn, ZoomOut, RotateCcw, Download, Printer, Upload } from 'lucide-react'
 
 // A4 기준 캔버스 최대 폭(px) — 이 값에서 zoom=1이 됨
 const A4_MAX_PX = 580
@@ -161,6 +162,62 @@ export default function Home() {
     setFocusedOverlayId(null)
   }, [])
 
+  // ── Excel upload & template ──────────────────────────────────────────
+  const excelInputRef = useRef<HTMLInputElement>(null)
+
+  const downloadTemplate = () => {
+    const headers = state.fields.map((f) => f.label)
+    const ws = XLSX.utils.aoa_to_sheet([headers])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '명패목록')
+    const formatHeaders = ['항목명', '폰트크기', '굵기', '폰트', '정렬', 'X위치', 'Y위치', '너비', '높이', '색상']
+    const formatRows = state.fields.map((f) => [
+      f.label, f.fontSize, f.fontWeight, f.fontFamily, f.textAlign,
+      f.positionX, f.positionY, f.widthPct, f.heightPct, f.color,
+    ])
+    const formatWs = XLSX.utils.aoa_to_sheet([formatHeaders, ...formatRows])
+    XLSX.utils.book_append_sheet(wb, formatWs, '서식')
+    XLSX.writeFile(wb, '명패_양식.xlsx')
+  }
+
+  const handleExcelFile = async (file: File) => {
+    try {
+      const fieldLabels = state.fields.map((f) => f.label)
+      const result = await parseExcelFile(file, fieldLabels)
+      if (result.rows.length === 0) { toast.error('데이터 행이 없습니다.'); return }
+      handleExcelParsed(result)
+      result.unmatched.forEach((label) => toast.warning(`'${label}' 항목에 해당하는 열이 없습니다.`))
+      if (result.newColumns.length > 0) {
+        toast.success(`${result.rows.length}명 로드 완료 · 새 항목 자동 추가: ${result.newColumns.join(', ')}`)
+      } else {
+        toast.success(`${result.rows.length}명의 데이터를 불러왔습니다.`)
+      }
+    } catch {
+      toast.error('파일을 읽는 중 오류가 발생했습니다.')
+    }
+  }
+
+  // ── PDF export ───────────────────────────────────────────────────────
+  const { exportPdf, previewPdf, isExporting, progress } = usePdfExport()
+  const totalRows = state.excelRows.length || 1
+
+  const handleExportPdf = async () => {
+    try {
+      await exportPdf(state)
+      toast.success(`PDF ${totalRows}장 생성이 완료되었습니다.`)
+    } catch {
+      toast.error('PDF 생성 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handlePreviewPdf = async () => {
+    try {
+      await previewPdf(state)
+    } catch {
+      toast.error('인쇄 미리보기 준비 중 오류가 발생했습니다.')
+    }
+  }
+
   // ── Pan (Space + drag) — transform 기반으로 캔버스 자체를 이동 ────────
   const [isPanMode, setIsPanMode] = useState(false)
   const [isPanDragging, setIsPanDragging] = useState(false)
@@ -239,11 +296,86 @@ export default function Home() {
         onSelect={handleThumbnailSelect}
       />
       <div className="h-screen flex flex-col">
-        <header className="bg-[#475569] text-white px-6 py-3 shrink-0 flex items-center justify-between">
-          <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="text-xs opacity-60">© min2448</span>
-            <span className="text-[10px] opacity-40">2026-05-21-v2</span>
+        <header className="bg-[#475569] text-white shrink-0">
+          {/* 1행: 타이틀 + 저작권 */}
+          <div className="flex items-center justify-between px-6 py-2 border-b border-white/10">
+            <h1 className="text-base font-bold tracking-tight">명패 제작기</h1>
+            <div className="flex flex-col items-end">
+              <span className="text-xs opacity-60">© min2448</span>
+              <span className="text-[10px] opacity-40">2026-05-21-v2</span>
+            </div>
+          </div>
+
+          {/* 2행: 툴바 */}
+          <div className="flex items-center gap-1.5 px-4 py-1.5 overflow-x-auto">
+            {/* 단축키 힌트 */}
+            <span className="text-[10px] text-white/50 shrink-0 pr-1 whitespace-nowrap">
+              드래그: 이동 · 핸들: 크기 조절 · 클릭→재클릭: 텍스트 편집 ·{' '}
+              <kbd className="bg-white/15 px-0.5 rounded">Esc</kbd>: 종료 ·{' '}
+              <kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>+이미지: 자르기 ·{' '}
+              <kbd className="bg-white/15 px-0.5 rounded">Space</kbd>: 화면 이동
+            </span>
+
+            <div className="h-4 w-px bg-white/25 shrink-0 mx-1" />
+
+            {/* 엑셀 */}
+            <button
+              onClick={downloadTemplate}
+              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0 whitespace-nowrap"
+            >
+              <Download className="w-3 h-3" />
+              양식 다운로드
+            </button>
+            <button
+              onClick={() => excelInputRef.current?.click()}
+              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0 whitespace-nowrap"
+            >
+              <Upload className="w-3 h-3" />
+              {state.excelRows.length > 0 ? `파일 변경 (${state.excelRows.length}명)` : '엑셀 파일 선택'}
+            </button>
+            <input
+              ref={excelInputRef}
+              type="file"
+              accept=".xlsx,.csv"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleExcelFile(f); e.target.value = '' }}
+            />
+
+            <div className="h-4 w-px bg-white/25 shrink-0 mx-1" />
+
+            {/* 출력 */}
+            <button
+              onClick={handlePreviewPdf}
+              disabled={isExporting}
+              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0 whitespace-nowrap disabled:opacity-40"
+            >
+              <Printer className="w-3 h-3" />
+              {isExporting ? `생성 중... (${progress.current}/${progress.total})` : `인쇄 미리보기 (${totalRows}장)`}
+            </button>
+            <button
+              onClick={handleExportPdf}
+              disabled={isExporting}
+              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0 whitespace-nowrap disabled:opacity-40"
+            >
+              <Download className="w-3 h-3" />
+              {isExporting ? '생성 중...' : `PDF 다운로드 (${totalRows}장)`}
+            </button>
+
+            <div className="h-4 w-px bg-white/25 shrink-0 mx-1" />
+
+            {/* 배율 */}
+            <button onClick={handleZoomOut} className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0" title="축소">
+              <ZoomOut className="w-3 h-3" />
+            </button>
+            <span className="text-[11px] w-10 text-center tabular-nums select-none shrink-0">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button onClick={handleZoomIn} className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0" title="확대">
+              <ZoomIn className="w-3 h-3" />
+            </button>
+            <button onClick={handleZoomReset} className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0" title="배율 초기화">
+              <RotateCcw className="w-3 h-3" />
+            </button>
           </div>
         </header>
 
@@ -286,13 +418,6 @@ export default function Home() {
               onReset={resetFields}
               onSaveAsDefault={() => saveAsDefault(state.fields)}
             />
-            <hr />
-            <ExcelUploader
-              fields={state.fields}
-              rowCount={state.excelRows.length}
-              onParsed={handleExcelParsed}
-            />
-            <ExportButton state={state} />
           </aside>
 
           {/* ── 중앙 편집 캔버스 (A4) ── */}
@@ -307,26 +432,6 @@ export default function Home() {
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseUp}
           >
-            <p className="text-xs text-gray-500 mb-3 text-center">
-              드래그: 이동 · 핸들: 크기 조절 · 선택 후 다시 클릭: 텍스트 편집 · <kbd className="bg-gray-200 px-1 rounded">Esc</kbd>: 종료 · <kbd className="bg-gray-200 px-1 rounded">Shift</kbd>+이미지: 자르기 · <kbd className="bg-gray-200 px-1 rounded">Space</kbd>: 화면 이동
-            </p>
-
-            {/* 줌 컨트롤 */}
-            <div className="flex items-center gap-1 mb-4">
-              <button onClick={handleZoomOut} className="w-7 h-7 flex items-center justify-center rounded border border-gray-400 bg-white text-gray-600 hover:border-gray-500 hover:bg-gray-50" title="축소">
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-xs w-12 text-center tabular-nums text-gray-600 select-none bg-white rounded border border-gray-400 py-0.5">
-                {Math.round(zoom * 100)}%
-              </span>
-              <button onClick={handleZoomIn} className="w-7 h-7 flex items-center justify-center rounded border border-gray-400 bg-white text-gray-600 hover:border-gray-500 hover:bg-gray-50" title="확대">
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={handleZoomReset} className="w-7 h-7 flex items-center justify-center rounded border border-gray-400 bg-white text-gray-600 hover:border-gray-500 hover:bg-gray-50" title="원래 크기">
-                <RotateCcw className="w-3 h-3" />
-              </button>
-            </div>
-
             {/* Space 패닝: transform으로 캔버스 위치 이동 + 패닝 중 포인터 이벤트 차단 */}
             <div style={{
               pointerEvents: isPanMode ? 'none' : 'auto',
