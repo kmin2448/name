@@ -130,18 +130,21 @@ function renderStaticField(field: TextFieldConfig, data: Record<string, string>)
         position: 'absolute',
         left: `${field.positionX}%`, top: `${field.positionY}%`,
         width: `${field.widthPct}%`, height: `${field.heightPct}%`,
-        display: 'flex', alignItems: 'center',
         overflow: 'hidden', boxSizing: 'border-box',
       }}
     >
-      <span style={{
-        display: 'block', width: '100%',
-        fontSize: `${field.fontSize}px`, fontWeight: field.fontWeight,
-        fontFamily: field.fontFamily, textAlign: field.textAlign,
-        color: field.color, whiteSpace: 'pre-line', lineHeight: 1.2,
-      }}>
-        {data[field.label] ?? `[${field.label}]`}
-      </span>
+      <div style={{ display: 'table', width: '100%', height: '100%', tableLayout: 'fixed' }}>
+        <div style={{ display: 'table-cell', verticalAlign: 'middle' }}>
+          <span style={{
+            display: 'block', width: '100%',
+            fontSize: `${field.fontSize}px`, fontWeight: field.fontWeight,
+            fontFamily: field.fontFamily, textAlign: field.textAlign,
+            color: field.color, whiteSpace: 'pre-line', lineHeight: 1.2,
+          }}>
+            {data[field.label] ?? `[${field.label}]`}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

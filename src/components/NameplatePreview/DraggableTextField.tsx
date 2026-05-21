@@ -225,23 +225,25 @@ export function DraggableTextField({
             }}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
-            <span
-              style={{
-                display: 'block',
-                width: '100%',
-                fontSize: `${field.fontSize}px`,
-                fontWeight: field.fontWeight,
-                fontFamily: field.fontFamily,
-                textAlign: field.textAlign,
-                color: field.color,
-                whiteSpace: 'pre-line',
-                lineHeight: 1.2,
-                pointerEvents: 'none',
-              }}
-            >
-              {value || `[${field.label}]`}
-            </span>
+          <div style={{ width: '100%', height: '100%', display: 'table', tableLayout: 'fixed' }}>
+            <div style={{ display: 'table-cell', verticalAlign: 'middle' }}>
+              <span
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  fontSize: `${field.fontSize}px`,
+                  fontWeight: field.fontWeight,
+                  fontFamily: field.fontFamily,
+                  textAlign: field.textAlign,
+                  color: field.color,
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.2,
+                  pointerEvents: 'none',
+                }}
+              >
+                {value || `[${field.label}]`}
+              </span>
+            </div>
           </div>
         )}
       </div>

@@ -387,7 +387,7 @@ export default function Home() {
           {/* 저작권 */}
           <div className="ml-auto shrink-0 flex flex-col items-end pl-3">
             <span className="text-xs opacity-60">© min2448</span>
-            <span className="text-[10px] opacity-40">2026-05-21-v3</span>
+            <span className="text-[10px] opacity-40">2026-05-21-v4</span>
           </div>
         </header>
 
