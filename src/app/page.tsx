@@ -8,12 +8,12 @@ import { TextFieldEditor } from '@/components/SettingsPanel/TextFieldEditor'
 import { ExcelUploader } from '@/components/SettingsPanel/ExcelUploader'
 import { LayerPanel } from '@/components/SettingsPanel/LayerPanel'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
-import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 import { ExportButton } from '@/components/ExportButton'
 import { HelpPanel } from '@/components/HelpPanel'
+import { ThumbnailPanel } from '@/components/ThumbnailPanel'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
-import { ZoomIn, ZoomOut, RotateCcw, Square } from 'lucide-react'
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 
 // A4 기준 캔버스 최대 폭(px) — 이 값에서 zoom=1이 됨
 const A4_MAX_PX = 580
@@ -52,11 +52,12 @@ export default function Home() {
     clearPageFieldOverride,
     setLayers,
     setShowBorder,
+    resetFields,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
   const [focusedOverlayId, setFocusedOverlayId] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(1.0)
+  const [zoom, setZoom] = useState(1.5)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(false)
 
@@ -170,6 +171,17 @@ export default function Home() {
     <>
       <Toaster position="top-right" richColors />
       <HelpPanel />
+      <ThumbnailPanel
+        state={state}
+        selectedRowIndex={selectedRowIndex}
+        applyToAll={applyToAll}
+        hasPageOverride={hasPageOverride}
+        onApplyToAllChange={setApplyToAll}
+        onRowFieldChange={handleRowFieldChange}
+        onClearPageOverride={() => clearPageFieldOverride(selectedRowIndex)}
+        onToggleBorder={() => setShowBorder(!state.showBorder)}
+        onSelect={handleThumbnailSelect}
+      />
       <div className="h-screen flex flex-col">
         <header className="bg-[#475569] text-white px-6 py-3 shrink-0 flex items-center justify-between">
           <h1 className="text-lg font-bold tracking-tight">명패 제작기</h1>
@@ -215,6 +227,7 @@ export default function Home() {
               onRemove={removeField}
               onAdd={addField}
               onFocus={handleFieldFocus}
+              onReset={resetFields}
             />
             <hr />
             <ExcelUploader
@@ -266,85 +279,6 @@ export default function Home() {
 
           </main>
 
-          {/* ── 우측 미리보기 패널 (엑셀 업로드 시 표시) ── */}
-          {hasExcelData && (
-            <aside className="border-l overflow-y-auto bg-white shrink-0 flex flex-col" style={{ width: 720 }}>
-              {/* 데이터 편집 */}
-              <div className={`px-4 pt-4 pb-3 border-b transition-colors ${applyToAll ? 'bg-orange-50' : 'bg-white'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-gray-600">
-                    {selectedRowIndex + 1}번 데이터 (총 {state.excelRows.length}명)
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    {hasPageOverride && !applyToAll && (
-                      <button
-                        onClick={() => clearPageFieldOverride(selectedRowIndex)}
-                        className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded hover:bg-orange-200 transition-colors"
-                        title="이 페이지의 커스텀 서식 제거"
-                      >
-                        커스텀 취소 ✕
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setShowBorder(!state.showBorder)}
-                      className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border transition-colors ${state.showBorder ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
-                      title={state.showBorder ? '테두리 숨기기' : '테두리 표시'}
-                    >
-                      <Square className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* 이 페이지만 / 전체 적용 토글 */}
-                <div className="flex text-xs border border-gray-200 rounded overflow-hidden mb-2">
-                  <button
-                    onClick={() => setApplyToAll(false)}
-                    className={`flex-1 py-0.5 transition-colors ${!applyToAll ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                  >
-                    이 페이지만
-                  </button>
-                  <button
-                    onClick={() => setApplyToAll(true)}
-                    className={`flex-1 py-0.5 border-l border-gray-200 transition-colors ${applyToAll ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                  >
-                    전체 적용
-                  </button>
-                </div>
-
-                {applyToAll && (
-                  <p className="text-xs text-orange-500 mb-2">⚠ 전체 {state.excelRows.length}개 페이지에 동일하게 적용됩니다</p>
-                )}
-
-                <div className="flex flex-col gap-1.5">
-                  {state.fields.map((field) => (
-                    <div key={field.id} className="flex items-center gap-1.5">
-                      <span className="text-xs text-gray-500 whitespace-nowrap w-16 shrink-0">{field.label}</span>
-                      <input
-                        className={`h-6 text-xs border rounded px-1.5 flex-1 focus:outline-none ${applyToAll ? 'border-orange-300 focus:border-orange-500' : 'border-gray-200 focus:border-[#475569]'}`}
-                        value={state.excelRows[selectedRowIndex]?.[field.label] ?? ''}
-                        onChange={(e) => handleRowFieldChange(field.label, e.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 페이지 썸네일 */}
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <PageThumbnails
-                  rows={state.excelRows}
-                  fields={state.fields}
-                  pageFieldOverrides={state.pageFieldOverrides}
-                  size={state.size}
-                  backgroundImage={state.backgroundImage}
-                  overlayImages={state.overlayImages}
-                  layers={state.layers}
-                  selectedIndex={selectedRowIndex}
-                  onSelect={handleThumbnailSelect}
-                />
-              </div>
-            </aside>
-          )}
         </div>
       </div>
     </>

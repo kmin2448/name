@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider'
 import { Toggle } from '@/components/ui/toggle'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus, ChevronDown } from 'lucide-react'
+import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus, ChevronDown, RotateCcw } from 'lucide-react'
 import { useLocalFonts } from '@/hooks/useLocalFonts'
 
 function FontSizeInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -84,9 +84,10 @@ type Props = {
   onRemove: (id: string) => void
   onAdd: () => void
   onFocus?: (id: string) => void
+  onReset?: () => void
 }
 
-export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, onFocus }: Props) {
+export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, onFocus, onReset }: Props) {
   const fonts = useLocalFonts()
   const [open, setOpen] = useState(true)
 
@@ -104,10 +105,24 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, 
           />
           <span className="text-sm font-semibold text-gray-900">텍스트 항목</span>
         </button>
-        <Button size="sm" variant="outline" onClick={onAdd}>
-          <Plus className="w-3 h-3 mr-1" />
-          추가
-        </Button>
+        <div className="flex items-center gap-1.5">
+          {onReset && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onReset}
+              className="text-xs text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+              title="모든 항목을 기본값으로 초기화"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              초기화
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={onAdd}>
+            <Plus className="w-3 h-3 mr-1" />
+            추가
+          </Button>
+        </div>
       </div>
 
       {open && fields.map((field) => (

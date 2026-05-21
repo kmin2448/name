@@ -26,6 +26,7 @@ type Action =
   | { type: 'MOVE_LAYER'; payload: { id: string; direction: 'up' | 'down' } }
   | { type: 'SET_LAYERS'; payload: string[] }
   | { type: 'SET_SHOW_BORDER'; payload: boolean }
+  | { type: 'RESET_FIELDS' }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -217,6 +218,17 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
     case 'SET_SHOW_BORDER':
       return { ...state, showBorder: action.payload }
 
+    case 'RESET_FIELDS': {
+      const overlayIds = state.overlayImages.map((o) => o.id)
+      const preservedOverlayLayers = state.layers.filter((id) => overlayIds.includes(id))
+      return {
+        ...state,
+        fields: DEFAULT_FIELDS,
+        layers: [...preservedOverlayLayers, ...DEFAULT_FIELDS.map((f) => f.id)],
+        pageFieldOverrides: {},
+      }
+    }
+
     default:
       return state
   }
@@ -296,6 +308,7 @@ export function useNameplateState() {
     (v: boolean) => dispatch({ type: 'SET_SHOW_BORDER', payload: v }),
     []
   )
+  const resetFields = useCallback(() => dispatch({ type: 'RESET_FIELDS' }), [])
 
   return {
     state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
@@ -303,6 +316,6 @@ export function useNameplateState() {
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
-    moveLayer, setLayers, setShowBorder,
+    moveLayer, setLayers, setShowBorder, resetFields,
   }
 }
