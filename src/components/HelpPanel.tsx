@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { BookOpen, X } from 'lucide-react'
 
-const PANEL_WIDTH = 320
+const PANEL_WIDTH = 480
 
 const STEPS = [
   {
@@ -100,7 +100,7 @@ export function HelpPanel() {
           {/* 헤더 */}
           <div className="flex items-center gap-2 mb-5">
             <BookOpen className="w-4 h-4 text-[#475569] shrink-0" />
-            <h2 className="text-sm font-bold text-gray-800">사용 방법</h2>
+            <h2 className="text-base font-bold text-gray-800">사용 방법</h2>
           </div>
 
           {/* 단계별 안내 */}
@@ -111,8 +111,8 @@ export function HelpPanel() {
                   {step.num}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-800 mb-1">{step.title}</p>
-                  <p className="text-[11px] text-gray-500 leading-relaxed whitespace-pre-line">{step.desc}</p>
+                  <p className="text-sm font-bold text-gray-800 mb-1">{step.title}</p>
+                  <p className="text-[13px] text-gray-500 leading-relaxed whitespace-pre-line">{step.desc}</p>
                 </div>
               </li>
             ))}
@@ -123,10 +123,10 @@ export function HelpPanel() {
 
           {/* 팁 */}
           <div>
-            <p className="text-xs font-bold text-gray-700 mb-2.5">💡 알아두면 좋은 점</p>
+            <p className="text-sm font-bold text-gray-700 mb-2.5">💡 알아두면 좋은 점</p>
             <ul className="space-y-2">
               {TIPS.map((tip, i) => (
-                <li key={i} className="flex gap-2 text-[11px] text-gray-500 leading-relaxed">
+                <li key={i} className="flex gap-2 text-[13px] text-gray-500 leading-relaxed">
                   <span className="text-[#475569] shrink-0">•</span>
                   <span>{tip}</span>
                 </li>
@@ -139,10 +139,10 @@ export function HelpPanel() {
 
           {/* PDF 인쇄 방법 */}
           <div>
-            <p className="text-xs font-bold text-gray-700 mb-2.5">🖨️ PDF 인쇄 방법</p>
+            <p className="text-sm font-bold text-gray-700 mb-2.5">🖨️ PDF 인쇄 방법</p>
             <ul className="space-y-1.5">
               {PRINT_TIPS.map((tip, i) => (
-                <li key={i} className="flex gap-2 text-[11px] text-gray-500 leading-relaxed">
+                <li key={i} className="flex gap-2 text-[13px] text-gray-500 leading-relaxed">
                   <span className="text-[#475569] shrink-0">•</span>
                   <span>{tip}</span>
                 </li>
