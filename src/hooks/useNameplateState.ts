@@ -3,6 +3,26 @@ import { useReducer, useCallback } from 'react'
 import { NameplateState, NameplateSize, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DEFAULT_SIZE, DEFAULT_FIELDS, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
 
+const CUSTOM_DEFAULTS_KEY = 'nameplate_default_fields'
+
+function loadCustomDefaultFields(): TextFieldConfig[] | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(CUSTOM_DEFAULTS_KEY)
+    return stored ? (JSON.parse(stored) as TextFieldConfig[]) : null
+  } catch {
+    return null
+  }
+}
+
+function saveCustomDefaultFields(fields: TextFieldConfig[]): void {
+  try {
+    localStorage.setItem(CUSTOM_DEFAULTS_KEY, JSON.stringify(fields))
+  } catch {
+    // localStorage 사용 불가 환경에서는 무시
+  }
+}
+
 type Action =
   | { type: 'SET_SIZE'; payload: NameplateSize }
   | { type: 'SET_BACKGROUND'; payload: string | null }
@@ -26,7 +46,7 @@ type Action =
   | { type: 'MOVE_LAYER'; payload: { id: string; direction: 'up' | 'down' } }
   | { type: 'SET_LAYERS'; payload: string[] }
   | { type: 'SET_SHOW_BORDER'; payload: boolean }
-  | { type: 'RESET_FIELDS' }
+  | { type: 'RESET_FIELDS'; payload: TextFieldConfig[] }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -219,12 +239,13 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       return { ...state, showBorder: action.payload }
 
     case 'RESET_FIELDS': {
+      const targetFields = action.payload
       const overlayIds = state.overlayImages.map((o) => o.id)
       const preservedOverlayLayers = state.layers.filter((id) => overlayIds.includes(id))
       return {
         ...state,
-        fields: DEFAULT_FIELDS,
-        layers: [...preservedOverlayLayers, ...DEFAULT_FIELDS.map((f) => f.id)],
+        fields: targetFields,
+        layers: [...preservedOverlayLayers, ...targetFields.map((f) => f.id)],
         pageFieldOverrides: {},
       }
     }
@@ -247,7 +268,15 @@ export const initialState: NameplateState = {
 }
 
 export function useNameplateState() {
-  const [state, dispatch] = useReducer(nameplateReducer, initialState)
+  const [state, dispatch] = useReducer(nameplateReducer, undefined, (): NameplateState => {
+    const customDefaults = loadCustomDefaultFields()
+    if (!customDefaults) return initialState
+    return {
+      ...initialState,
+      fields: customDefaults,
+      layers: customDefaults.map((f) => f.id),
+    }
+  })
 
   const setSize = useCallback((size: NameplateSize) => dispatch({ type: 'SET_SIZE', payload: size }), [])
   const setBackground = useCallback((bg: string | null) => dispatch({ type: 'SET_BACKGROUND', payload: bg }), [])
@@ -308,7 +337,14 @@ export function useNameplateState() {
     (v: boolean) => dispatch({ type: 'SET_SHOW_BORDER', payload: v }),
     []
   )
-  const resetFields = useCallback(() => dispatch({ type: 'RESET_FIELDS' }), [])
+  const resetFields = useCallback(() => {
+    const defaults = loadCustomDefaultFields() ?? DEFAULT_FIELDS
+    dispatch({ type: 'RESET_FIELDS', payload: defaults })
+  }, [])
+
+  const saveAsDefault = useCallback((fields: TextFieldConfig[]) => {
+    saveCustomDefaultFields(fields)
+  }, [])
 
   return {
     state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
@@ -316,6 +352,6 @@ export function useNameplateState() {
     updateField, removeField, moveField, resizeField,
     setPreviewData, setExcelRows, updateExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
-    moveLayer, setLayers, setShowBorder, resetFields,
+    moveLayer, setLayers, setShowBorder, resetFields, saveAsDefault,
   }
 }

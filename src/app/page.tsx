@@ -53,6 +53,7 @@ export default function Home() {
     setLayers,
     setShowBorder,
     resetFields,
+    saveAsDefault,
   } = useNameplateState()
 
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -228,6 +229,7 @@ export default function Home() {
               onAdd={addField}
               onFocus={handleFieldFocus}
               onReset={resetFields}
+              onSaveAsDefault={() => saveAsDefault(state.fields)}
             />
             <hr />
             <ExcelUploader

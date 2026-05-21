@@ -40,7 +40,8 @@ export function ThumbnailPanel({
         className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
         style={{
           right: open ? PANEL_WIDTH : 0,
-          top: 'calc(50% - 72px)',
+          top: '35%',
+          transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}
         title={open ? '닫기' : '페이지 썸네일'}

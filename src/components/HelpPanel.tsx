@@ -64,9 +64,10 @@ export function HelpPanel() {
       {/* 토글 버튼 — 스크롤과 무관하게 항상 오른쪽 고정 */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed top-1/2 z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
+        className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
         style={{
           right: open ? PANEL_WIDTH : 0,
+          top: '65%',
           transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}

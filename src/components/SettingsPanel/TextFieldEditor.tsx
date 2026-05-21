@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider'
 import { Toggle } from '@/components/ui/toggle'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus, ChevronDown, RotateCcw } from 'lucide-react'
+import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus, ChevronDown, RotateCcw, Bookmark } from 'lucide-react'
 import { useLocalFonts } from '@/hooks/useLocalFonts'
 
 function FontSizeInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -85,9 +85,10 @@ type Props = {
   onAdd: () => void
   onFocus?: (id: string) => void
   onReset?: () => void
+  onSaveAsDefault?: () => void
 }
 
-export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, onFocus, onReset }: Props) {
+export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, onFocus, onReset, onSaveAsDefault }: Props) {
   const fonts = useLocalFonts()
   const [open, setOpen] = useState(true)
 
@@ -106,13 +107,25 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, 
           <span className="text-sm font-semibold text-gray-900">텍스트 항목</span>
         </button>
         <div className="flex items-center gap-1.5">
+          {onSaveAsDefault && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSaveAsDefault}
+              className="text-xs text-blue-600 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              title="현재 설정을 기본값으로 저장 (앱 재시작 후에도 유지)"
+            >
+              <Bookmark className="w-3 h-3 mr-1" />
+              기본값 저장
+            </Button>
+          )}
           {onReset && (
             <Button
               size="sm"
               variant="outline"
               onClick={onReset}
               className="text-xs text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
-              title="모든 항목을 기본값으로 초기화"
+              title="저장된 기본값으로 초기화"
             >
               <RotateCcw className="w-3 h-3 mr-1" />
               초기화
