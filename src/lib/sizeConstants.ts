@@ -10,7 +10,7 @@ export const NAMEPLATE_SIZES: NameplateSize[] = [
   { label: '사용자 지정', widthMm: 210, heightMm: 70, isCustom: true },
 ]
 
-export const DEFAULT_SIZE: NameplateSize = NAMEPLATE_SIZES[1]
+export const DEFAULT_SIZE: NameplateSize = NAMEPLATE_SIZES[3]
 
 export const DEFAULT_FIELDS: TextFieldConfig[] = [
   {
