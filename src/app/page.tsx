@@ -161,11 +161,11 @@ export default function Home() {
     setFocusedOverlayId(null)
   }, [])
 
-  // ── Pan (Space + drag) ───────────────────────────────────────────────
-  const canvasRef = useRef<HTMLElement>(null)
+  // ── Pan (Space + drag) — transform 기반으로 캔버스 자체를 이동 ────────
   const [isPanMode, setIsPanMode] = useState(false)
   const [isPanDragging, setIsPanDragging] = useState(false)
-  const panStart = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 })
+  const panStart = useRef<{ mouseX: number; mouseY: number; canvasX: number; canvasY: number } | null>(null)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -190,23 +190,25 @@ export default function Home() {
   }, [])
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    if (!isPanMode || !canvasRef.current) return
+    if (!isPanMode) return
     e.preventDefault()
     setIsPanDragging(true)
     panStart.current = {
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: canvasRef.current.scrollLeft,
-      scrollTop: canvasRef.current.scrollTop,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      canvasX: canvasOffset.x,
+      canvasY: canvasOffset.y,
     }
-  }, [isPanMode])
+  }, [isPanMode, canvasOffset])
 
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    if (!isPanDragging || !panStart.current || !canvasRef.current) return
-    const dx = e.clientX - panStart.current.x
-    const dy = e.clientY - panStart.current.y
-    canvasRef.current.scrollLeft = panStart.current.scrollLeft - dx
-    canvasRef.current.scrollTop = panStart.current.scrollTop - dy
+    if (!isPanDragging || !panStart.current) return
+    const dx = e.clientX - panStart.current.mouseX
+    const dy = e.clientY - panStart.current.mouseY
+    setCanvasOffset({
+      x: panStart.current.canvasX + dx,
+      y: panStart.current.canvasY + dy,
+    })
   }, [isPanDragging])
 
   const handleCanvasMouseUp = useCallback(() => {
@@ -295,8 +297,7 @@ export default function Home() {
 
           {/* ── 중앙 편집 캔버스 (A4) ── */}
           <main
-            ref={canvasRef}
-            className="flex-1 overflow-auto p-6 bg-gray-300 flex flex-col items-center"
+            className="flex-1 overflow-hidden p-6 bg-gray-300 flex flex-col items-center relative"
             style={{
               cursor: isPanMode ? (isPanDragging ? 'grabbing' : 'grab') : undefined,
               userSelect: isPanMode ? 'none' : undefined,
@@ -326,8 +327,11 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Space 패닝 중에는 캔버스 요소의 포인터 이벤트를 차단해 드래그 충돌 방지 */}
-            <div style={{ pointerEvents: isPanMode ? 'none' : 'auto' }}>
+            {/* Space 패닝: transform으로 캔버스 위치 이동 + 패닝 중 포인터 이벤트 차단 */}
+            <div style={{
+              pointerEvents: isPanMode ? 'none' : 'auto',
+              transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
+            }}>
               <NameplateCanvas
                 state={state}
                 overrideFields={effectiveFields}
