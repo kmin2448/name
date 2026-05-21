@@ -6,7 +6,7 @@ export const NAMEPLATE_SIZES: NameplateSize[] = [
   { label: 'A형 (대) 250×90mm', widthMm: 250, heightMm: 90 },
   { label: 'B형 (중) 210×70mm', widthMm: 210, heightMm: 70 },
   { label: 'C형 (소) 150×60mm', widthMm: 150, heightMm: 60 },
-  { label: '기타 200×87mm', widthMm: 200, heightMm: 87 },
+  { label: '기타 200×85mm', widthMm: 200, heightMm: 85 },
   { label: '사용자 지정', widthMm: 210, heightMm: 70, isCustom: true },
 ]
 
