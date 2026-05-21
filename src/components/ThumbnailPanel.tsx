@@ -4,7 +4,7 @@ import { LayoutGrid, X, Square } from 'lucide-react'
 import { NameplateState } from '@/types/nameplate'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 
-const PANEL_WIDTH = 480
+const PANEL_WIDTH = 720
 
 type Props = {
   state: NameplateState

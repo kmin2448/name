@@ -4,7 +4,7 @@ import { TextFieldConfig, NameplateSize, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { renderItemsStatic } from '@/components/NameplatePreview/NameplateCanvas'
 
-const COLS = 4
+const COLS = 2
 const GAP = 8
 const MAX_VISIBLE = 300
 
