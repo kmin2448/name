@@ -199,17 +199,8 @@ export default function Home() {
   }
 
   // ── PDF export ───────────────────────────────────────────────────────
-  const { exportPdf, previewPdf, isExporting, progress } = usePdfExport()
+  const { previewPdf, isExporting, progress } = usePdfExport()
   const totalRows = state.excelRows.length || 1
-
-  const handleExportPdf = async () => {
-    try {
-      await exportPdf(state)
-      toast.success(`PDF ${totalRows}장 생성이 완료되었습니다.`)
-    } catch {
-      toast.error('PDF 생성 중 오류가 발생했습니다.')
-    }
-  }
 
   const handlePreviewPdf = async () => {
     try {
@@ -348,14 +339,6 @@ export default function Home() {
           >
             <Printer className="w-3 h-3" />
             {isExporting ? `생성 중... (${progress.current}/${progress.total})` : `인쇄 미리보기 (${totalRows}장)`}
-          </button>
-          <button
-            onClick={handleExportPdf}
-            disabled={isExporting}
-            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0 whitespace-nowrap disabled:opacity-40"
-          >
-            <Download className="w-3 h-3" />
-            {isExporting ? '생성 중...' : `PDF 다운로드 (${totalRows}장)`}
           </button>
 
           <div className="h-4 w-px bg-white/25 shrink-0 mx-0.5" />
