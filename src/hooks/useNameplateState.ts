@@ -1,9 +1,11 @@
 'use client'
-import { useReducer, useCallback } from 'react'
+import { useReducer, useCallback, useEffect, useRef } from 'react'
 import { NameplateState, NameplateSize, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DEFAULT_SIZE, DEFAULT_FIELDS, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
 
 const CUSTOM_DEFAULTS_KEY = 'nameplate_default_fields'
+// 명단(excelRows) 및 모든 편집 내용을 새로고침 후에도 유지하기 위한 전체 상태 저장 키
+const PERSISTED_STATE_KEY = 'nameplate_state'
 
 function loadCustomDefaultFields(): TextFieldConfig[] | null {
   if (typeof window === 'undefined') return null
@@ -20,6 +22,44 @@ function saveCustomDefaultFields(fields: TextFieldConfig[]): void {
     localStorage.setItem(CUSTOM_DEFAULTS_KEY, JSON.stringify(fields))
   } catch {
     // localStorage 사용 불가 환경에서는 무시
+  }
+}
+
+function loadPersistedState(): NameplateState | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(PERSISTED_STATE_KEY)
+    if (!stored) return null
+    const parsed = JSON.parse(stored) as Partial<NameplateState>
+    // 스키마 변경에 대비해 기본 상태와 병합 (누락된 필드는 기본값 사용)
+    return {
+      ...initialState,
+      ...parsed,
+      size: parsed.size ?? initialState.size,
+    }
+  } catch {
+    return null
+  }
+}
+
+function savePersistedState(state: NameplateState): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(PERSISTED_STATE_KEY, JSON.stringify(state))
+  } catch {
+    // base64 이미지 등으로 용량 초과 시 명단/편집 내용만이라도 보존하도록 이미지 제외 후 재시도
+    try {
+      const overlayIds = new Set(state.overlayImages.map((o) => o.id))
+      const lightweight: NameplateState = {
+        ...state,
+        backgroundImage: null,
+        overlayImages: [],
+        layers: state.layers.filter((id) => !overlayIds.has(id)),
+      }
+      localStorage.setItem(PERSISTED_STATE_KEY, JSON.stringify(lightweight))
+    } catch {
+      // 저장 불가 환경에서는 무시
+    }
   }
 }
 
@@ -284,6 +324,10 @@ export const initialState: NameplateState = {
 
 export function useNameplateState() {
   const [state, dispatch] = useReducer(nameplateReducer, undefined, (): NameplateState => {
+    // 저장된 전체 상태(명단·편집 내용 포함)가 있으면 우선 복원
+    const persisted = loadPersistedState()
+    if (persisted) return persisted
+
     const customDefaults = loadCustomDefaultFields()
     if (!customDefaults) return initialState
     return {
@@ -292,6 +336,17 @@ export function useNameplateState() {
       layers: customDefaults.map((f) => f.id),
     }
   })
+
+  // 상태가 바뀔 때마다 localStorage에 저장해 새로고침 후에도 유지
+  // (최초 마운트 시점의 중복 저장은 건너뜀)
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    savePersistedState(state)
+  }, [state])
 
   const setSize = useCallback((size: NameplateSize) => dispatch({ type: 'SET_SIZE', payload: size }), [])
   const setBackground = useCallback((bg: string | null) => dispatch({ type: 'SET_BACKGROUND', payload: bg }), [])
