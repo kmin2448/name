@@ -10,6 +10,22 @@ function decode(src: string): string {
   return decodeURIComponent(src.replace(/^data:image\/svg\+xml,/, ''))
 }
 
+function makeField(positionY: number, heightPct: number) {
+  return {
+    id: `f-${positionY}`,
+    label: '테스트',
+    fontSize: 40,
+    fontWeight: 'normal' as const,
+    fontFamily: '맑은 고딕',
+    textAlign: 'center' as const,
+    positionX: 10,
+    positionY,
+    widthPct: 80,
+    heightPct,
+    color: '#000000',
+  }
+}
+
 type BandRect = { y: number; height: number }
 
 function parseBands(svg: string): BandRect[] {
@@ -57,6 +73,39 @@ describe('composeBandedBackground', () => {
     // 상단 띠 안쪽 경계는 10% 지점보다 여백만큼 위에 있어야 한다
     const top = bands.find((b) => b.y === 0)
     expect(top!.height).toBeLessThan(maxBandH)
+  })
+
+  it('텍스트 항목을 주면 상·하단 모두 텍스트 경계에서 같은 여백을 확보한다', () => {
+    // 기본 레이아웃처럼 비대칭 배치: 위쪽 텍스트는 5%에서 시작, 아래쪽은 89%에서 끝
+    const fields = [
+      makeField(5, 28),   // 프로그램명: 5%~33%
+      makeField(59, 30),  // 이름: 59%~89%
+    ]
+    const bands = parseBands(decode(composeBandedBackground(PHOTO, HEIGHT_MM, fields)))
+    const gap = (BAND_GAP_PX / (HEIGHT_MM * MM_TO_PX)) * 400
+
+    const top = bands.find((b) => b.y === 0)
+    const bottom = bands.find((b) => b.y > 0)
+
+    // 상단 띠 안쪽 경계와 텍스트 상단(5% = 20유닛) 사이 여백 = gap
+    expect((5 / 100) * 400 - top!.height).toBeCloseTo(gap, 5)
+    // 하단 띠 안쪽 경계와 텍스트 하단(89% = 356유닛) 사이 여백 = gap
+    expect(bottom!.y - (89 / 100) * 400).toBeCloseTo(gap, 5)
+  })
+
+  it('텍스트가 위쪽 끝까지 올라와 있어도 최소 띠 높이는 유지된다', () => {
+    const fields = [makeField(0, 50)]
+    const bands = parseBands(decode(composeBandedBackground(PHOTO, HEIGHT_MM, fields)))
+    const top = bands.find((b) => b.y === 0)
+    expect(top!.height).toBeGreaterThanOrEqual(4)
+  })
+
+  it('텍스트가 중앙에만 있으면 띠는 기본 최대 높이(10%)를 넘지 않는다', () => {
+    const fields = [makeField(40, 20)] // 40%~60%
+    const bands = parseBands(decode(composeBandedBackground(PHOTO, HEIGHT_MM, fields)))
+    for (const band of bands) {
+      expect(band.height).toBeLessThanOrEqual((400 * BAND_PCT) / 100)
+    }
   })
 
   it('명패가 작을수록(=배율이 클수록) 같은 5px에 해당하는 여백이 더 커진다', () => {

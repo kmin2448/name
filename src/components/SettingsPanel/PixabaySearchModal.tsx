@@ -106,8 +106,8 @@ export function PixabaySearchModal({ initialMode, size, fields, previewData, onA
   // 옵션이 바뀌면 캐시된 원본 사진으로 즉시 재합성 (재다운로드 없음)
   const previewBg = useMemo(() => {
     if (!photoDataUrl) return null
-    return mode === 'band' ? composeBandedBackground(photoDataUrl, size.heightMm) : photoDataUrl
-  }, [photoDataUrl, mode, size.heightMm])
+    return mode === 'band' ? composeBandedBackground(photoDataUrl, size.heightMm, fields) : photoDataUrl
+  }, [photoDataUrl, mode, size.heightMm, fields])
 
   // 명패 실제 비율의 소형 미리보기 (텍스트 항목 포함)
   const PREVIEW_W = 340
