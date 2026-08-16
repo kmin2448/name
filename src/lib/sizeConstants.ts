@@ -67,8 +67,15 @@ export const DEFAULT_FIELDS: TextFieldConfig[] = [
   },
 ]
 
+/** 한국(서울) 시간대 기준 현재 연도 */
+export function getSeoulYear(): number {
+  return Number(
+    new Intl.DateTimeFormat('en', { timeZone: 'Asia/Seoul', year: 'numeric' }).format(new Date())
+  )
+}
+
 export const SAMPLE_PREVIEW_DATA: Record<string, string> = {
-  '프로그램명': '2026 봄 세미나',
+  '프로그램명': `${getSeoulYear()} 봄 세미나`,
   '소속': '한국개발자협회',
   '이름': '홍길동',
   '직책': '팀장',

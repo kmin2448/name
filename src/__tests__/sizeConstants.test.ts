@@ -1,4 +1,11 @@
-import { NAMEPLATE_SIZES, DEFAULT_SIZE, DEFAULT_FIELDS, MM_TO_PX } from '@/lib/sizeConstants'
+import {
+  NAMEPLATE_SIZES,
+  DEFAULT_SIZE,
+  DEFAULT_FIELDS,
+  MM_TO_PX,
+  SAMPLE_PREVIEW_DATA,
+  getSeoulYear,
+} from '@/lib/sizeConstants'
 
 describe('sizeConstants', () => {
   it('MM_TO_PX converts 1mm to ~3.78px', () => {
@@ -24,6 +31,13 @@ describe('sizeConstants', () => {
     expect(DEFAULT_SIZE.widthMm).toBe(200)
     expect(DEFAULT_SIZE.heightMm).toBe(82)
     expect(NAMEPLATE_SIZES).toContain(DEFAULT_SIZE)
+  })
+
+  it('기본 프로그램명은 서울 시간대 기준 현재 연도로 시작한다', () => {
+    // 독립 계산으로 검증: KST는 UTC+9 고정(서머타임 없음)
+    const seoulYear = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCFullYear()
+    expect(getSeoulYear()).toBe(seoulYear)
+    expect(SAMPLE_PREVIEW_DATA['프로그램명']).toBe(`${seoulYear} 봄 세미나`)
   })
 
   it('DEFAULT_FIELDS has 4 items with required properties', () => {
