@@ -27,7 +27,7 @@ export function BackgroundUploader({ value, onChange, size, fields, previewData 
   const isBandedCustom = hasCustom && value.startsWith('data:image/svg+xml')
 
   const applyImage = (dataUrl: string) => {
-    onChange(applyMode === 'band' ? composeBandedBackground(dataUrl) : dataUrl)
+    onChange(applyMode === 'band' ? composeBandedBackground(dataUrl, size.heightMm) : dataUrl)
   }
 
   const handleFile = (file: File) => {
