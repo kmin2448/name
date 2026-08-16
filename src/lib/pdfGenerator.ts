@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { NameplateState, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
+import { getBackgroundImageCss, getBackgroundSize } from '@/lib/backgroundPresets'
 
 const A4_W_MM = 210
 const A4_H_MM = 297
@@ -104,7 +105,8 @@ function buildHalfHtml(
 
   let bgCss = 'background-color:#fff;'
   if (backgroundImage) {
-    bgCss += `background-image:url(${backgroundImage});background-size:cover;background-position:center;`
+    bgCss += `background-image:${getBackgroundImageCss(backgroundImage)};`
+    bgCss += `background-size:${getBackgroundSize(backgroundImage)};background-position:center;`
   }
 
   return `<div style="position:relative;width:${widthPx}px;height:${heightPx}px;overflow:hidden;${bgCss}${rotate ? 'transform:rotate(180deg);' : ''}">${items}</div>`
@@ -194,8 +196,8 @@ function buildHalfElement(
     `height:${size.heightMm * MM_TO_PX}px`,
     `overflow:hidden`,
     `background-color:#ffffff`,
-    backgroundImage ? `background-image:url(${backgroundImage})` : '',
-    `background-size:cover`,
+    backgroundImage ? `background-image:${getBackgroundImageCss(backgroundImage)}` : '',
+    `background-size:${getBackgroundSize(backgroundImage)}`,
     `background-position:center`,
     rotate ? `transform:rotate(180deg)` : '',
   ].filter(Boolean).join(';')

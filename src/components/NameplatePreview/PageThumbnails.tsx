@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from 'react'
 import { TextFieldConfig, NameplateSize, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { renderItemsStatic } from '@/components/NameplatePreview/NameplateCanvas'
+import { getBackgroundImageCss, getBackgroundSize } from '@/lib/backgroundPresets'
 
 const COLS = 2
 const GAP = 8
@@ -45,8 +46,8 @@ function ThumbnailFace({
   const thumbH = Math.round(heightPx * scale)
 
   const bgStyle: React.CSSProperties = {
-    backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
-    backgroundSize: 'cover',
+    backgroundImage: getBackgroundImageCss(backgroundImage),
+    backgroundSize: getBackgroundSize(backgroundImage),
     backgroundPosition: 'center',
     backgroundColor: '#ffffff',
   }

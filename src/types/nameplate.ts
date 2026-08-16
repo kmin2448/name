@@ -39,6 +39,13 @@ export type OverlayImage = {
   cropH: number
 }
 
+export type BackgroundPreset = {
+  id: string
+  name: string
+  description: string
+  src: string      // SVG data URI
+}
+
 export type NameplateState = {
   size: NameplateSize
   backgroundImage: string | null

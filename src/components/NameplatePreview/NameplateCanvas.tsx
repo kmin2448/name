@@ -4,6 +4,7 @@ import { NameplateState, TextFieldConfig, OverlayImage } from '@/types/nameplate
 import { DraggableTextField } from './DraggableTextField'
 import { DraggableOverlayImage } from './DraggableOverlayImage'
 import { MM_TO_PX } from '@/lib/sizeConstants'
+import { getBackgroundImageCss, getBackgroundSize } from '@/lib/backgroundPresets'
 
 const SNAP_THRESHOLD = 2
 
@@ -230,8 +231,8 @@ export function NameplateCanvas({
   const handleDragEnd = useCallback(() => setGuides([]), [])
 
   const bgStyle: React.CSSProperties = {
-    backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
-    backgroundSize: 'cover',
+    backgroundImage: getBackgroundImageCss(backgroundImage),
+    backgroundSize: getBackgroundSize(backgroundImage),
     backgroundPosition: 'center',
     backgroundColor: '#ffffff',
   }
