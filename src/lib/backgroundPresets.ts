@@ -5,7 +5,7 @@ import { BackgroundPreset } from '@/types/nameplate'
  * CSS `url('...')` · HTML `style="..."` · cssText의 `;` 구분자 어디에 넣어도 깨지지 않도록
  * 괄호/따옴표를 모두 퍼센트 인코딩하고, MIME 뒤 `;charset` 파라미터도 붙이지 않는다.
  */
-function toDataUri(svg: string): string {
+export function svgToDataUri(svg: string): string {
   const compact = svg.replace(/\s+/g, ' ').trim()
   const encoded = encodeURIComponent(compact)
     .replace(/\(/g, '%28')
@@ -33,7 +33,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     id: 'classic-navy',
     name: '클래식 네이비',
     description: '남색 띠 + 금색 라인 · 공식 세미나/회의',
-    src: toDataUri(
+    src: svgToDataUri(
       frame(
         [
           '<rect width="1000" height="18" fill="#1b3a5c"/>',
@@ -48,7 +48,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     id: 'minimal-line',
     name: '미니멀 라인',
     description: '얇은 이중 실선 · 어떤 서체에도 무난',
-    src: toDataUri(
+    src: svgToDataUri(
       frame(
         [
           '<rect y="12" width="1000" height="3" fill="#475569"/>',
@@ -63,7 +63,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     id: 'emerald-gradient',
     name: '에메랄드 그라데이션',
     description: '청록 그라데이션 띠 · 워크숍/발표회',
-    src: toDataUri(
+    src: svgToDataUri(
       frame(
         [
           '<defs>',
@@ -82,7 +82,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     id: 'wine-gold',
     name: '와인 & 골드',
     description: '자주색 띠 + 금색 이중선 · 시상식/만찬',
-    src: toDataUri(
+    src: svgToDataUri(
       frame(
         [
           '<rect width="1000" height="16" fill="#6b1d2b"/>',
@@ -99,7 +99,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     id: 'soft-sky',
     name: '소프트 스카이',
     description: '하늘색이 흰색으로 사라지는 띠 · 교육/연수',
-    src: toDataUri(
+    src: svgToDataUri(
       frame(
         [
           '<defs>',
@@ -128,11 +128,11 @@ export function isPresetBackground(src: string | null): boolean {
 }
 
 /**
- * 기본 제공 배경은 명패 비율에 맞춰 늘려(100% 100%) 상·하단 띠가 잘리지 않게 하고,
- * 사용자 업로드 이미지는 요구사항대로 '채우기(cover)' 방식으로 배치한다.
+ * SVG 배경(기본 제공 배경·상하단 띠 합성 배경)은 명패 비율에 맞춰 늘려(100% 100%)
+ * 상·하단 띠가 잘리지 않게 하고, 일반 이미지는 '채우기(cover)' 방식으로 배치한다.
  */
 export function getBackgroundSize(src: string | null): string {
-  return isPresetBackground(src) ? '100% 100%' : 'cover'
+  return src !== null && src.startsWith('data:image/svg+xml') ? '100% 100%' : 'cover'
 }
 
 /** CSS background-image 값. 배경이 없으면 undefined */

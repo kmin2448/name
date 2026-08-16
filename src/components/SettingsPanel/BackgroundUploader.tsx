@@ -1,9 +1,11 @@
 'use client'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { BACKGROUND_PRESETS, isPresetBackground } from '@/lib/backgroundPresets'
+import { composeBandedBackground } from '@/lib/backgroundCompose'
+import { PixabaySearch, BackgroundApplyMode } from './PixabaySearch'
 
 const MAX_SIZE = 10 * 1024 * 1024
 
@@ -14,7 +16,13 @@ type Props = {
 
 export function BackgroundUploader({ value, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [applyMode, setApplyMode] = useState<BackgroundApplyMode>('cover')
   const hasCustom = value !== null && !isPresetBackground(value)
+  const isBandedCustom = hasCustom && value.startsWith('data:image/svg+xml')
+
+  const applyImage = (dataUrl: string) => {
+    onChange(applyMode === 'band' ? composeBandedBackground(dataUrl) : dataUrl)
+  }
 
   const handleFile = (file: File) => {
     if (file.size > MAX_SIZE) {
@@ -24,7 +32,7 @@ export function BackgroundUploader({ value, onChange }: Props) {
     // 새로고침 후에도 유지되고 PDF 출력/미리보기 창에서도 그대로 그려지도록 data URL로 저장
     const reader = new FileReader()
     reader.onload = () => {
-      if (typeof reader.result === 'string') onChange(reader.result)
+      if (typeof reader.result === 'string') applyImage(reader.result)
     }
     reader.onerror = () => toast.error('이미지를 읽지 못했습니다. 다시 시도해 주세요.')
     reader.readAsDataURL(file)
@@ -81,7 +89,29 @@ export function BackgroundUploader({ value, onChange }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2 pt-1">
+      {/* 업로드/검색 이미지 공통 적용 방식 */}
+      <div className="space-y-1 pt-1">
+        <Label className="text-xs font-medium text-gray-600">사진 적용 방식</Label>
+        <div className="flex text-xs border border-gray-200 rounded overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setApplyMode('cover')}
+            className={`flex-1 py-1 transition-colors ${applyMode === 'cover' ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+          >
+            전체 채우기
+          </button>
+          <button
+            type="button"
+            onClick={() => setApplyMode('band')}
+            title="사진을 상·하단 띠에만 배치해 글씨와 겹치지 않습니다"
+            className={`flex-1 py-1 border-l border-gray-200 transition-colors ${applyMode === 'band' ? 'bg-[#475569] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+          >
+            상·하단 띠 (글씨 간섭 없음)
+          </button>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
         <Button variant="outline" className="flex-1 text-sm" onClick={() => inputRef.current?.click()}>
           {hasCustom ? '이미지 변경' : '직접 업로드'}
         </Button>
@@ -94,10 +124,16 @@ export function BackgroundUploader({ value, onChange }: Props) {
 
       {hasCustom && (
         <div className="space-y-1">
-          <p className="text-[11px] text-gray-500">업로드한 배경 (채우기 방식으로 배치)</p>
-          <div className="rounded border overflow-hidden h-14">
+          <p className="text-[11px] text-gray-500">
+            {isBandedCustom ? '적용된 배경 (상·하단 띠)' : '적용된 배경 (채우기 방식으로 배치)'}
+          </p>
+          <div className="rounded border overflow-hidden h-14 bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={value} alt="배경 미리보기" className="w-full h-full object-cover" />
+            <img
+              src={value}
+              alt="배경 미리보기"
+              className={isBandedCustom ? 'w-full h-full' : 'w-full h-full object-cover'}
+            />
           </div>
         </div>
       )}
@@ -113,6 +149,9 @@ export function BackgroundUploader({ value, onChange }: Props) {
           e.target.value = ''
         }}
       />
+
+      <hr className="!my-3" />
+      <PixabaySearch applyMode={applyMode} onApply={onChange} />
     </div>
   )
 }
