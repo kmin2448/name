@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Search, Loader2, X, Check } from 'lucide-react'
-import { PixabayImage, PixabaySearchResponse } from '@/lib/pixabay'
+import { PixabayImage, PixabaySearchResponse, mergeSearchResults, hasMoreResults } from '@/lib/pixabay'
 import { composeBandedBackground } from '@/lib/backgroundCompose'
 import { getBackgroundImageCss, getBackgroundSize } from '@/lib/backgroundPresets'
 import { renderItemsStatic } from '@/components/NameplatePreview/NameplateCanvas'
@@ -35,10 +35,11 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 export function PixabaySearchModal({ initialMode, size, fields, previewData, onApply, onClose }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PixabayImage[]>([])
-  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const [page, setPage] = useState(1)
   const [searched, setSearched] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const gridRef = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<BackgroundApplyMode>(initialMode)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
@@ -59,13 +60,26 @@ export function PixabaySearchModal({ initialMode, size, fields, previewData, onA
       const res = await fetch(`/api/pixabay/search?q=${encodeURIComponent(q)}&page=${nextPage}`)
       const data = (await res.json()) as PixabaySearchResponse | { error: string }
       if (!res.ok || 'error' in data) {
-        toast.error('error' in data ? data.error : '검색에 실패했습니다.')
+        // 마지막 페이지 이후 요청은 API가 거부하므로 추가 페이지 실패는 종료로 처리
+        if (nextPage > 1) {
+          setHasMore(false)
+          toast.info('더 불러올 결과가 없습니다.')
+        } else {
+          toast.error('error' in data ? data.error : '검색에 실패했습니다.')
+        }
         return
       }
-      setResults((prev) => (nextPage === 1 ? data.hits : [...prev, ...data.hits]))
-      setTotal(data.total)
+      const merged = mergeSearchResults(results, data.hits, nextPage)
+      setResults(merged)
+      setHasMore(hasMoreResults(merged.length, data.total, data.hits.length))
       setPage(nextPage)
       setSearched(true)
+      // 새로 붙은 결과가 내부 스크롤 아래에 숨지 않도록 그리드를 끝까지 스크롤
+      if (nextPage > 1) {
+        requestAnimationFrame(() => {
+          gridRef.current?.scrollTo({ top: gridRef.current.scrollHeight, behavior: 'smooth' })
+        })
+      }
     } catch {
       toast.error('검색 중 오류가 발생했습니다.')
     } finally {
@@ -155,7 +169,7 @@ export function PixabaySearchModal({ initialMode, size, fields, previewData, onA
           {/* 검색 결과 */}
           {results.length > 0 && (
             <div className="space-y-2">
-              <div className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto pr-0.5">
+              <div ref={gridRef} className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto pr-0.5">
                 {results.map((img) => (
                   <button
                     key={img.id}
@@ -183,7 +197,7 @@ export function PixabaySearchModal({ initialMode, size, fields, previewData, onA
                   </button>
                 ))}
               </div>
-              {results.length < total && (
+              {hasMore && (
                 <button
                   onClick={() => search(page + 1)}
                   disabled={isSearching}
