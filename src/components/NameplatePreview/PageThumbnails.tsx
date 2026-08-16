@@ -68,10 +68,10 @@ function ThumbnailFace({
 export function PageThumbnails({
   rows, fields, pageFieldOverrides, size, backgroundImage, overlayImages, layers, selectedIndex, onSelect,
 }: Props) {
-  if (rows.length === 0) return null
-
   const containerRef = useRef<HTMLDivElement>(null)
   const [thumbWidth, setThumbWidth] = useState(0)
+  // 빈 명단 → 명단 업로드 시 컨테이너가 새로 마운트되므로 effect도 다시 실행해야 한다
+  const hasRows = rows.length > 0
 
   useEffect(() => {
     const el = containerRef.current
@@ -82,7 +82,9 @@ export function PageThumbnails({
     })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [hasRows])
+
+  if (!hasRows) return null
 
   const visible = rows.slice(0, MAX_VISIBLE)
   const overflow = rows.length - MAX_VISIBLE
