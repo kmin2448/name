@@ -15,6 +15,7 @@ import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
+import { APP_VERSION } from '@/lib/version'
 import { ZoomIn, ZoomOut, RotateCcw, Download, Printer, Upload } from 'lucide-react'
 
 // A4 기준 캔버스 최대 폭(px) — 이 값에서 zoom=1이 됨
@@ -428,7 +429,7 @@ export default function Home() {
           {/* 저작권 */}
           <div className="ml-auto shrink-0 flex flex-col items-end pl-3">
             <span className="text-xs opacity-60">© min2448</span>
-            <span className="text-[10px] opacity-40">2026-05-21-v9</span>
+            <span className="text-[10px] opacity-40">{APP_VERSION}</span>
           </div>
         </header>
 
