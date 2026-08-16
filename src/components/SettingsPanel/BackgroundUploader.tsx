@@ -3,20 +3,26 @@ import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { Search } from 'lucide-react'
 import { BACKGROUND_PRESETS, isPresetBackground } from '@/lib/backgroundPresets'
 import { composeBandedBackground } from '@/lib/backgroundCompose'
-import { PixabaySearch, BackgroundApplyMode } from './PixabaySearch'
+import { PixabaySearchModal, BackgroundApplyMode } from './PixabaySearchModal'
+import { NameplateSize, TextFieldConfig } from '@/types/nameplate'
 
 const MAX_SIZE = 10 * 1024 * 1024
 
 type Props = {
   value: string | null
   onChange: (image: string | null) => void
+  size: NameplateSize
+  fields: TextFieldConfig[]
+  previewData: Record<string, string>
 }
 
-export function BackgroundUploader({ value, onChange }: Props) {
+export function BackgroundUploader({ value, onChange, size, fields, previewData }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [applyMode, setApplyMode] = useState<BackgroundApplyMode>('cover')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const hasCustom = value !== null && !isPresetBackground(value)
   const isBandedCustom = hasCustom && value.startsWith('data:image/svg+xml')
 
@@ -115,6 +121,10 @@ export function BackgroundUploader({ value, onChange }: Props) {
         <Button variant="outline" className="flex-1 text-sm" onClick={() => inputRef.current?.click()}>
           {hasCustom ? '이미지 변경' : '직접 업로드'}
         </Button>
+        <Button variant="outline" className="flex-1 text-sm" onClick={() => setIsSearchOpen(true)}>
+          <Search className="w-3.5 h-3.5 mr-1" />
+          픽사베이 검색
+        </Button>
         {value && (
           <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
             제거
@@ -150,8 +160,16 @@ export function BackgroundUploader({ value, onChange }: Props) {
         }}
       />
 
-      <hr className="!my-3" />
-      <PixabaySearch applyMode={applyMode} onApply={onChange} />
+      {isSearchOpen && (
+        <PixabaySearchModal
+          initialMode={applyMode}
+          size={size}
+          fields={fields}
+          previewData={previewData}
+          onApply={onChange}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
     </div>
   )
 }

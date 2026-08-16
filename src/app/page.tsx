@@ -442,8 +442,10 @@ export default function Home() {
               backgroundImage={state.backgroundImage}
               onBackgroundChange={setBackground}
               overlayImages={state.overlayImages}
-              fields={state.fields}
+              fields={effectiveFields}
               excelRows={state.excelRows}
+              size={state.size}
+              previewData={state.previewData}
               onAddOverlay={addOverlayImage}
               onUpdateOverlay={updateOverlayImage}
               onRemoveOverlay={removeOverlayImage}

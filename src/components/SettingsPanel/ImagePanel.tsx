@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { BackgroundUploader } from './BackgroundUploader'
 import { OverlayImageManager } from './OverlayImageManager'
-import { OverlayImage, TextFieldConfig } from '@/types/nameplate'
+import { OverlayImage, TextFieldConfig, NameplateSize } from '@/types/nameplate'
 import { ChevronDown } from 'lucide-react'
 
 type Props = {
@@ -11,6 +11,8 @@ type Props = {
   overlayImages: OverlayImage[]
   fields: TextFieldConfig[]
   excelRows: Record<string, string>[]
+  size: NameplateSize
+  previewData: Record<string, string>
   onAddOverlay: (image: OverlayImage) => void
   onUpdateOverlay: (image: OverlayImage) => void
   onRemoveOverlay: (id: string) => void
@@ -22,6 +24,8 @@ export function ImagePanel({
   overlayImages,
   fields,
   excelRows,
+  size,
+  previewData,
   onAddOverlay,
   onUpdateOverlay,
   onRemoveOverlay,
@@ -68,7 +72,13 @@ export function ImagePanel({
           </div>
 
           {tab === 'background' && (
-            <BackgroundUploader value={backgroundImage} onChange={onBackgroundChange} />
+            <BackgroundUploader
+              value={backgroundImage}
+              onChange={onBackgroundChange}
+              size={size}
+              fields={fields}
+              previewData={previewData}
+            />
           )}
           {tab === 'overlay' && (
             <OverlayImageManager
