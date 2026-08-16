@@ -8,9 +8,11 @@ type Props = {
   fields: TextFieldConfig[]
   overlayImages: OverlayImage[]
   onSetLayers: (newLayers: string[]) => void
+  selectedId?: string | null
+  onSelect?: (id: string) => void
 }
 
-export function LayerPanel({ layers, fields, overlayImages, onSetLayers }: Props) {
+export function LayerPanel({ layers, fields, overlayImages, onSetLayers, selectedId, onSelect }: Props) {
   const [open, setOpen] = useState(true)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const dragIndexRef = useRef<number | null>(null)
@@ -68,23 +70,29 @@ export function LayerPanel({ layers, fields, overlayImages, onSetLayers }: Props
       {open && (
         <div className="space-y-1">
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            위에 있을수록 화면 앞에 표시됩니다. 핸들을 드래그해 순서를 바꾸세요.
+            위에 있을수록 화면 앞에 표시됩니다. 핸들을 드래그해 순서를 바꾸고, 클릭해 요소를 선택하세요.
           </p>
           {reversed.map((id, displayIdx) => {
             const field = fields.find((f) => f.id === id)
             const overlay = overlayImages.find((o) => o.id === id)
             const label = field?.label ?? overlay?.name ?? id
             const isDropTarget = dragOverIndex === displayIdx && dragIndexRef.current !== displayIdx
+            const isSelected = selectedId === id
 
             return (
               <div
                 key={id}
                 draggable
+                onClick={() => onSelect?.(id)}
                 onDragStart={(e) => handleDragStart(e, displayIdx)}
                 onDragOver={(e) => handleDragOver(e, displayIdx)}
                 onDrop={(e) => handleDrop(e, displayIdx)}
                 onDragEnd={handleDragEnd}
-                className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50 border border-gray-100 select-none"
+                className={`flex items-center gap-2 px-2 py-1.5 rounded border select-none ${
+                  isSelected
+                    ? 'bg-slate-100 border-[#475569] ring-1 ring-[#475569]'
+                    : 'bg-gray-50 border-gray-100 hover:border-gray-300'
+                }`}
                 style={{
                   cursor: 'grab',
                   borderTopColor: isDropTarget ? '#475569' : undefined,

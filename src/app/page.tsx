@@ -14,6 +14,7 @@ import { ThumbnailPanel } from '@/components/ThumbnailPanel'
 import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
+import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { ZoomIn, ZoomOut, RotateCcw, Download, Printer, Upload } from 'lucide-react'
 
 // A4 기준 캔버스 최대 폭(px) — 이 값에서 zoom=1이 됨
@@ -162,6 +163,46 @@ export default function Home() {
     setFocusedFieldId(null)
     setFocusedOverlayId(null)
   }, [])
+
+  // ── 레이어 패널에서 요소 선택 ─────────────────────────────────────────
+  const handleLayerSelect = useCallback((id: string) => {
+    if (state.fields.some((f) => f.id === id)) {
+      setFocusedFieldId(id)
+      setFocusedOverlayId(null)
+    } else {
+      setFocusedOverlayId(id)
+      setFocusedFieldId(null)
+    }
+  }, [state.fields])
+
+  // ── 방향키로 선택 요소 이동 (1mm, Shift: 5mm) ─────────────────────────
+  // 정방향(하단) 명패 기준 방향. 상단 반전본은 같은 좌표를 180도 회전해
+  // 그리므로 화면상 자동으로 반대 방향으로 움직인다.
+  useEffect(() => {
+    const handleArrowKey = (e: KeyboardEvent) => {
+      if (!focusedFieldId && !focusedOverlayId) return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+
+      const delta = arrowKeyDelta(e.key, state.size.widthMm, state.size.heightMm, e.shiftKey)
+      if (!delta) return
+      e.preventDefault()
+
+      if (focusedFieldId) {
+        const field = effectiveFields.find((f) => f.id === focusedFieldId)
+        if (field) handleMoveField(field.id, field.positionX + delta.dxPct, field.positionY + delta.dyPct)
+        return
+      }
+      const img = state.overlayImages.find((o) => o.id === focusedOverlayId)
+      if (img) {
+        const x = Math.max(0, Math.min(100 - img.widthPct, img.positionX + delta.dxPct))
+        const y = Math.max(0, Math.min(100 - img.heightPct, img.positionY + delta.dyPct))
+        handleOverlayMove(img.id, x, y)
+      }
+    }
+    window.addEventListener('keydown', handleArrowKey)
+    return () => window.removeEventListener('keydown', handleArrowKey)
+  })
 
   // ── Excel upload & template ──────────────────────────────────────────
   const excelInputRef = useRef<HTMLInputElement>(null)
@@ -378,7 +419,7 @@ export default function Home() {
 
           {/* 단축키 힌트 */}
           <span className="text-[10px] text-white/50 shrink-0 whitespace-nowrap">
-            드래그: 이동 · 핸들: 크기 조절 · 클릭→재클릭: 텍스트 편집 ·{' '}
+            드래그: 이동 · 방향키: 1mm 이동 (<kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>: 5mm) · 핸들: 크기 조절 · 클릭→재클릭: 텍스트 편집 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Esc</kbd>: 종료 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>+이미지: 자르기 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Space</kbd>: 화면 이동
@@ -412,6 +453,8 @@ export default function Home() {
               fields={state.fields}
               overlayImages={state.overlayImages}
               onSetLayers={setLayers}
+              selectedId={focusedFieldId ?? focusedOverlayId}
+              onSelect={handleLayerSelect}
             />
             <hr />
             {selectedRowIndex >= 0 && hasExcelData && (
