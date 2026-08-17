@@ -15,6 +15,32 @@ type Props = {
   /** 불러온 명단을 편집 화면에 반영한다 */
   onLoad: (payload: RosterPayload) => void
   pageCount: number
+  /** 열린 패널 위에 글자가 겹치지 않도록, 패널이 모두 닫혔을 때만 안내 문구를 보여준다 */
+  showHint: boolean
+}
+
+/** 구글 브랜드 가이드의 4색 'G' 마크 */
+function GoogleMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
+      <path
+        fill="#4285F4"
+        d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z"
+      />
+      <path
+        fill="#EA4335"
+        d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"
+      />
+    </svg>
+  )
 }
 
 function formatSavedAt(iso: string): string {
@@ -34,7 +60,7 @@ async function readError(res: Response, fallback: string): Promise<string> {
   }
 }
 
-export function RosterPanel({ open, onOpenChange, getPayload, onLoad, pageCount }: Props) {
+export function RosterPanel({ open, onOpenChange, getPayload, onLoad, pageCount, showHint }: Props) {
   const { data: session, status } = useSession()
   const email = session?.user?.email ?? null
 
@@ -165,32 +191,41 @@ export function RosterPanel({ open, onOpenChange, getPayload, onLoad, pageCount 
 
   return (
     <>
-      {/* 토글 버튼 — 썸네일 버튼 아래 */}
-      <button
-        onClick={() => onOpenChange(!open)}
-        className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
+      {/* 토글 버튼 — 썸네일 버튼 아래. 안내 문구가 버튼 왼쪽에 항상 붙어 다닌다 */}
+      <div
+        className="fixed z-50 flex items-center gap-2 pointer-events-none"
         style={{
           right: open ? PANEL_WIDTH : 0,
           top: '48%',
           transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}
-        title={open ? '닫기' : '내 명단'}
       >
-        {open ? (
-          <X className="w-4 h-4" />
-        ) : (
-          <>
-            <FolderOpen className="w-4 h-4" />
-            <span
-              className="text-[11px] font-medium tracking-wide"
-              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-            >
-              내 명단
-            </span>
-          </>
+        {showHint && (
+          <span className="text-[11px] font-medium text-gray-700 whitespace-nowrap">
+            구글로 로그인하여 작성 명단을 관리하세요.
+          </span>
         )}
-      </button>
+        <button
+          onClick={() => onOpenChange(!open)}
+          className="pointer-events-auto bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
+          title={open ? '닫기' : '내 명단'}
+        >
+          {open ? (
+            <X className="w-4 h-4" />
+          ) : (
+            <>
+              <FolderOpen className="w-4 h-4" />
+              <span
+                className="text-[11px] font-medium tracking-wide"
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+              >
+                내 명단
+              </span>
+            </>
+          )}
+        </button>
+      </div>
 
       <div
         className="fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-[40] overflow-y-auto"
@@ -217,8 +252,9 @@ export function RosterPanel({ open, onOpenChange, getPayload, onLoad, pageCount 
               </p>
               <button
                 onClick={() => signIn('google')}
-                className="text-xs px-3 py-1.5 rounded bg-[#475569] text-white hover:bg-[#334155] active:bg-[#1e293b] transition-colors"
+                className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm transition-colors"
               >
+                <GoogleMark />
                 구글로 로그인
               </button>
             </div>

@@ -81,6 +81,9 @@ export default function Home() {
   const [alignReference, setAlignReference] = useState<AlignReference>('selection')
   const [thumbnailOpen, setThumbnailOpen] = useState(false)
   const [rosterOpen, setRosterOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  // 오른쪽 패널이 하나라도 열려 있으면 버튼 옆 안내 문구가 패널을 가리므로 숨긴다
+  const showPanelHints = !thumbnailOpen && !rosterOpen && !helpOpen
   const [zoom, setZoom] = useState(DEFAULT_CANVAS_VIEW.zoom)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
@@ -511,8 +514,9 @@ export default function Home() {
         getPayload={() => extractRosterPayload(state)}
         onLoad={handleLoadRoster}
         pageCount={state.excelRows.length}
+        showHint={showPanelHints}
       />
-      <HelpPanel />
+      <HelpPanel onOpenChange={setHelpOpen} />
       <ThumbnailPanel
         state={state}
         selectedRowIndex={selectedRowIndex}
@@ -528,6 +532,7 @@ export default function Home() {
         onApplyCurrentPageToAll={() => applyFieldsToAll(effectiveFields)}
         onAddPage={handleAddPage}
         onDeletePage={handleDeletePage}
+        showHint={showPanelHints}
       />
       <div className="h-screen flex flex-col">
         <header className="bg-[#475569] text-white shrink-0 flex items-center gap-1.5 px-4 py-2 overflow-x-auto">

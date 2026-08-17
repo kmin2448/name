@@ -83,14 +83,26 @@ const PRINT_TIPS = [
   '단면 인쇄 후 접어서 사용',
 ]
 
-export function HelpPanel() {
+type Props = {
+  /** 다른 패널의 안내 문구를 가리지 않도록 열림 상태를 바깥에서도 알 수 있게 한다 */
+  onOpenChange?: (open: boolean) => void
+}
+
+export function HelpPanel({ onOpenChange }: Props) {
   const [open, setOpen] = useState(false)
+
+  const toggle = () => {
+    setOpen((v) => {
+      onOpenChange?.(!v)
+      return !v
+    })
+  }
 
   return (
     <>
       {/* 토글 버튼 — 스크롤과 무관하게 항상 오른쪽 고정 */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
         style={{
           right: open ? PANEL_WIDTH : 0,
