@@ -1,5 +1,5 @@
 'use client'
-import { LayoutGrid, X, Square, ChevronsRight, Plus, Trash2 } from 'lucide-react'
+import { LayoutGrid, X, Square, ChevronsRight, Plus, Trash2, Upload } from 'lucide-react'
 import { NameplateState } from '@/types/nameplate'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 
@@ -22,6 +22,8 @@ type Props = {
   onDeletePage: (index: number) => void
   /** 열린 패널 위에 글자가 겹치지 않도록, 패널이 모두 닫혔을 때만 안내 문구를 보여준다 */
   showHint: boolean
+  /** 상단 헤더의 엑셀 업로드와 동일한 동작 */
+  onUploadExcel: () => void
 }
 
 export function ThumbnailPanel({
@@ -40,18 +42,18 @@ export function ThumbnailPanel({
   onAddPage,
   onDeletePage,
   showHint,
+  onUploadExcel,
 }: Props) {
   const hasData = state.excelRows.length > 0
 
   return (
     <>
-      {/* 토글 버튼 — 우측 고정 (사용법 버튼 위). 안내 문구가 버튼 왼쪽에 항상 붙어 다닌다 */}
+      {/* 토글 버튼 — 우측 최상단 고정. 안내 문구가 버튼 왼쪽에 항상 붙어 다닌다 */}
       <div
         className="fixed z-50 flex items-center gap-2 pointer-events-none"
         style={{
           right: open ? PANEL_WIDTH : 0,
-          top: '25%',
-          transform: 'translateY(-50%)',
+          top: 'calc(52px + 2%)',
           transition: 'right 300ms ease',
         }}
       >
@@ -95,6 +97,15 @@ export function ThumbnailPanel({
           <div className="flex items-center gap-2 mb-4">
             <LayoutGrid className="w-4 h-4 text-[#475569] shrink-0" />
             <h2 className="text-sm font-bold text-gray-800">페이지 목록</h2>
+            {/* 상단 헤더의 엑셀 업로드 버튼과 같은 동작 */}
+            <button
+              onClick={onUploadExcel}
+              className="ml-auto flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-[#475569] text-white hover:bg-[#334155] active:bg-[#1e293b] transition-colors shrink-0 whitespace-nowrap"
+              title="엑셀 파일을 올려 명단을 불러옵니다"
+            >
+              <Upload className="w-3 h-3" />
+              {hasData ? `파일 변경 (${state.excelRows.length}명)` : '엑셀 파일 업로드'}
+            </button>
           </div>
 
           {!hasData ? (
