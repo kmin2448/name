@@ -12,6 +12,7 @@ import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
 import { HelpPanel } from '@/components/HelpPanel'
 import { ThumbnailPanel } from '@/components/ThumbnailPanel'
 import { MultiSelectToolbar } from '@/components/MultiSelectToolbar'
+import { VisitCounter } from '@/components/VisitCounter'
 import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
@@ -433,6 +434,7 @@ export default function Home() {
   return (
     <>
       <Toaster position="top-right" richColors />
+      <VisitCounter />
       <HelpPanel />
       <ThumbnailPanel
         state={state}
