@@ -19,9 +19,8 @@ import { MM_TO_PX, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
 import { DEFAULT_CANVAS_VIEW, MIN_ZOOM, MAX_ZOOM, loadCanvasView, saveCanvasView } from '@/lib/canvasView'
 import { createPageRow, nextSelectedIndex } from '@/lib/pageRows'
 import { RosterPayload, extractRosterPayload, mergeRestoredState } from '@/lib/rosters'
-import { RosterPanel } from '@/components/RosterPanel'
 import { ApplyMode, DesignImages, DesignPayload, applyDesign } from '@/lib/designs'
-import { DesignPanel } from '@/components/DesignPanel'
+import { LibraryPanel } from '@/components/LibraryPanel'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
 import { stepFontSize } from '@/lib/fontSize'
@@ -82,11 +81,10 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [alignReference, setAlignReference] = useState<AlignReference>('selection')
   const [thumbnailOpen, setThumbnailOpen] = useState(false)
-  const [rosterOpen, setRosterOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [designOpen, setDesignOpen] = useState(false)
   // 오른쪽 패널이 하나라도 열려 있으면 버튼 옆 안내 문구가 패널을 가리므로 숨긴다
-  const showPanelHints = !thumbnailOpen && !rosterOpen && !helpOpen && !designOpen
+  const showPanelHints = !thumbnailOpen && !libraryOpen && !helpOpen
   const [zoom, setZoom] = useState(DEFAULT_CANVAS_VIEW.zoom)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
@@ -517,20 +515,15 @@ export default function Home() {
     <>
       <Toaster position="top-right" richColors />
       <VisitCounter />
-      <RosterPanel
-        open={rosterOpen}
-        onOpenChange={setRosterOpen}
-        getPayload={() => extractRosterPayload(state)}
-        onLoad={handleLoadRoster}
-        pageCount={state.excelRows.length}
+      <LibraryPanel
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
         showHint={showPanelHints}
-      />
-      <DesignPanel
-        open={designOpen}
-        onOpenChange={setDesignOpen}
         state={state}
-        onApply={handleApplyDesign}
-        showHint={showPanelHints}
+        getRosterPayload={() => extractRosterPayload(state)}
+        onLoadRoster={handleLoadRoster}
+        onApplyDesign={handleApplyDesign}
+        pageCount={state.excelRows.length}
       />
       <HelpPanel onOpenChange={setHelpOpen} />
       <ThumbnailPanel
