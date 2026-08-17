@@ -9,6 +9,7 @@ import { ImagePanel } from '@/components/SettingsPanel/ImagePanel'
 import { TextFieldEditor } from '@/components/SettingsPanel/TextFieldEditor'
 import { LayerPanel } from '@/components/SettingsPanel/LayerPanel'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
+import { AppMenu } from '@/components/AppMenu'
 import { HelpPanel } from '@/components/HelpPanel'
 import { ThumbnailPanel } from '@/components/ThumbnailPanel'
 import { MultiSelectToolbar } from '@/components/MultiSelectToolbar'
@@ -554,8 +555,8 @@ export default function Home() {
       />
       <div className="h-screen flex flex-col">
         <header className="bg-[#475569] text-white shrink-0 flex items-center gap-1.5 px-4 py-2 overflow-x-auto">
-          {/* 타이틀 */}
-          <h1 className="text-base font-bold tracking-tight shrink-0 mr-1">명패 제작기</h1>
+          {/* 타이틀 겸 페이지 전환 메뉴 */}
+          <AppMenu current="nameplate" />
 
           <div className="h-4 w-px bg-white/25 shrink-0 mx-0.5" />
 
