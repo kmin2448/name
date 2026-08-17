@@ -29,6 +29,7 @@
     "eslint-config-next": "^14.2.35",
     "google-auth-library": "^11.0.2",
     "html2canvas": "^1.4.1",
+    "imagetracerjs": "^1.2.6",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.14.0",
     "next": "^14.2.35",
