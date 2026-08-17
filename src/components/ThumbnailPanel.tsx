@@ -20,6 +20,8 @@ type Props = {
   onApplyCurrentPageToAll: () => void
   onAddPage: () => void
   onDeletePage: (index: number) => void
+  /** 열린 패널 위에 글자가 겹치지 않도록, 패널이 모두 닫혔을 때만 안내 문구를 보여준다 */
+  showHint: boolean
 }
 
 export function ThumbnailPanel({
@@ -37,37 +39,47 @@ export function ThumbnailPanel({
   onApplyCurrentPageToAll,
   onAddPage,
   onDeletePage,
+  showHint,
 }: Props) {
   const hasData = state.excelRows.length > 0
 
   return (
     <>
-      {/* 토글 버튼 — 우측 고정 (사용법 버튼 위) */}
-      <button
-        onClick={() => onOpenChange(!open)}
-        className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
+      {/* 토글 버튼 — 우측 고정 (사용법 버튼 위). 안내 문구가 버튼 왼쪽에 항상 붙어 다닌다 */}
+      <div
+        className="fixed z-50 flex items-center gap-2 pointer-events-none"
         style={{
           right: open ? PANEL_WIDTH : 0,
           top: '25%',
           transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}
-        title={open ? '닫기' : '페이지 썸네일'}
       >
-        {open ? (
-          <X className="w-4 h-4" />
-        ) : (
-          <>
-            <LayoutGrid className="w-4 h-4" />
-            <span
-              className="text-[11px] font-medium tracking-wide"
-              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-            >
-              썸네일
-            </span>
-          </>
+        {showHint && (
+          <span className="text-[11px] font-medium text-gray-700 whitespace-nowrap">
+            엑셀 파일 업로드 후 썸네일에서 개별 페이지를 확인하세요
+          </span>
         )}
-      </button>
+        <button
+          onClick={() => onOpenChange(!open)}
+          className="pointer-events-auto bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
+          title={open ? '닫기' : '페이지 썸네일'}
+        >
+          {open ? (
+            <X className="w-4 h-4" />
+          ) : (
+            <>
+              <LayoutGrid className="w-4 h-4" />
+              <span
+                className="text-[11px] font-medium tracking-wide"
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+              >
+                썸네일
+              </span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* 슬라이드 패널 */}
       <div
