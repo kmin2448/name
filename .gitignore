@@ -1,3 +1,6 @@
 node_modules
 .next
 .env.local
+
+# TypeScript 증분 빌드 캐시 (tsc 실행 때마다 바뀌므로 추적하지 않음)
+*.tsbuildinfo
