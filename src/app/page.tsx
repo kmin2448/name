@@ -11,10 +11,12 @@ import { LayerPanel } from '@/components/SettingsPanel/LayerPanel'
 import { NameplateCanvas } from '@/components/NameplatePreview/NameplateCanvas'
 import { HelpPanel } from '@/components/HelpPanel'
 import { ThumbnailPanel } from '@/components/ThumbnailPanel'
+import { MultiSelectToolbar } from '@/components/MultiSelectToolbar'
 import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
+import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
 import { APP_VERSION } from '@/lib/version'
 import { ZoomIn, ZoomOut, RotateCcw, Download, Printer, Upload } from 'lucide-react'
 
@@ -29,6 +31,13 @@ function getEffectiveFields(
 ): TextFieldConfig[] {
   if (!overrides) return globalFields
   return globalFields.map((f) => overrides[f.id] ?? f)
+}
+
+/** 선택된 요소 — 텍스트 항목과 오버레이 이미지를 같은 방식으로 다루기 위한 형태 */
+type SelectedItem = SelectionBox & { kind: 'field' | 'overlay' }
+
+function clampPct(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
 }
 
 export default function Home() {
@@ -60,8 +69,10 @@ export default function Home() {
     applyFieldsToAll,
   } = useNameplateState()
 
-  const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
-  const [focusedOverlayId, setFocusedOverlayId] = useState<string | null>(null)
+  // 선택된 요소 id 목록 — 1개면 단일 선택, 2개 이상이면 다중 선택
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [alignReference, setAlignReference] = useState<AlignReference>('selection')
+  const [thumbnailOpen, setThumbnailOpen] = useState(false)
   const [zoom, setZoom] = useState(1.5)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
@@ -81,11 +92,47 @@ export default function Home() {
     !!state.pageFieldOverrides[selectedRowIndex] &&
     Object.keys(state.pageFieldOverrides[selectedRowIndex]).length > 0
 
+  // ── 선택 상태 파생값 ──────────────────────────────────────────────────
+  // 삭제된 요소의 id가 남아 있어도 자연스럽게 걸러진다.
+  const selectedItems: SelectedItem[] = selectedIds.flatMap((id): SelectedItem[] => {
+    const field = effectiveFields.find((f) => f.id === id)
+    if (field) {
+      return [{
+        id, kind: 'field',
+        positionX: field.positionX, positionY: field.positionY,
+        widthPct: field.widthPct, heightPct: field.heightPct,
+      }]
+    }
+    const img = state.overlayImages.find((o) => o.id === id)
+    if (img) {
+      return [{
+        id, kind: 'overlay',
+        positionX: img.positionX, positionY: img.positionY,
+        widthPct: img.widthPct, heightPct: img.heightPct,
+      }]
+    }
+    return []
+  })
+
+  const isMultiSelect = selectedItems.length > 1
+  const singleSelected = isMultiSelect ? undefined : selectedItems[0]
+  const focusedFieldId = singleSelected?.kind === 'field' ? singleSelected.id : null
+  const focusedOverlayId = singleSelected?.kind === 'overlay' ? singleSelected.id : null
+
+  const selectedFieldIds = selectedItems.filter((i) => i.kind === 'field').map((i) => i.id)
+  const selectionColor =
+    effectiveFields.find((f) => f.id === selectedFieldIds[0])?.color ?? '#000000'
+
   // ── Excel ────────────────────────────────────────────────────────────
   const handleExcelParsed = (result: ExcelParseResult) => {
     if (result.fieldConfigs && result.fieldConfigs.length > 0) setFields(result.fieldConfigs)
     setExcelRows(result.rows)
-    if (result.rows.length > 0) { setPreviewData(result.rows[0]); setSelectedRowIndex(0) }
+    if (result.rows.length > 0) {
+      setPreviewData(result.rows[0])
+      setSelectedRowIndex(0)
+      // 업로드 직후 바로 페이지 목록을 확인할 수 있도록 썸네일 패널을 연다
+      setThumbnailOpen(true)
+    }
     result.newColumns.forEach((col) => addFieldWithLabel(col))
   }
 
@@ -119,31 +166,70 @@ export default function Home() {
     }
   }
 
-  const handleMoveField = (id: string, positionX: number, positionY: number) => {
-    if (!applyToAll && selectedRowIndex >= 0) moveFieldForPage(selectedRowIndex, id, positionX, positionY)
-    else moveField(id, positionX, positionY)
+  /** 요소 1개만 이동 (그룹 처리 없음) — 텍스트·이미지 공통 진입점 */
+  const moveItem = (id: string, positionX: number, positionY: number) => {
+    if (state.fields.some((f) => f.id === id)) {
+      if (!applyToAll && selectedRowIndex >= 0) moveFieldForPage(selectedRowIndex, id, positionX, positionY)
+      else moveField(id, positionX, positionY)
+      return
+    }
+    const img = state.overlayImages.find((o) => o.id === id)
+    if (img) {
+      updateOverlayImage({
+        ...img,
+        positionX: clampPct(positionX, 0, 100 - img.widthPct),
+        positionY: clampPct(positionY, 0, 100 - img.heightPct),
+      })
+    }
   }
+
+  /** 선택된 요소 전체를 같은 양만큼 이동 — 상대 위치가 유지된다 */
+  const moveSelectionBy = (dxPct: number, dyPct: number) => {
+    const delta = clampGroupDelta(selectedItems, dxPct, dyPct)
+    if (delta.dxPct === 0 && delta.dyPct === 0) return
+    selectedItems.forEach((item) =>
+      moveItem(item.id, item.positionX + delta.dxPct, item.positionY + delta.dyPct)
+    )
+  }
+
+  /** 다중 선택 중 한 요소를 드래그하면 선택 전체가 함께 움직인다 */
+  const moveWithSelection = (id: string, positionX: number, positionY: number) => {
+    if (isMultiSelect && selectedIds.includes(id)) {
+      const current = selectedItems.find((i) => i.id === id)
+      if (current) {
+        moveSelectionBy(positionX - current.positionX, positionY - current.positionY)
+        return
+      }
+    }
+    moveItem(id, positionX, positionY)
+  }
+
+  const handleMoveField = (id: string, positionX: number, positionY: number) =>
+    moveWithSelection(id, positionX, positionY)
 
   const handleResizeField = (id: string, widthPct: number, heightPct: number) => {
     if (!applyToAll && selectedRowIndex >= 0) resizeFieldForPage(selectedRowIndex, id, widthPct, heightPct)
     else resizeField(id, widthPct, heightPct)
   }
 
-  const handleFieldFocus = (id: string) => {
-    setFocusedFieldId(id)
-    setFocusedOverlayId(null)
-  }
-
-  // ── Overlay canvas interactions ───────────────────────────────────────
-  const handleOverlayFocus = useCallback((id: string) => {
-    setFocusedOverlayId(id)
-    setFocusedFieldId(null)
+  // ── 선택 ──────────────────────────────────────────────────────────────
+  const handleSelect = useCallback((id: string, additive: boolean) => {
+    setSelectedIds((prev) => {
+      if (additive) return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      // 이미 다중 선택된 요소를 그냥 클릭한 경우, 그룹 드래그가 가능하도록 선택을 유지
+      if (prev.length > 1 && prev.includes(id)) return prev
+      return [id]
+    })
   }, [])
 
-  const handleOverlayMove = useCallback((id: string, x: number, y: number) => {
-    const img = state.overlayImages.find((o) => o.id === id)
-    if (img) updateOverlayImage({ ...img, positionX: x, positionY: y })
-  }, [state.overlayImages, updateOverlayImage])
+  const handleMarqueeSelect = useCallback((ids: string[], additive: boolean) => {
+    setSelectedIds((prev) => (additive ? [...prev, ...ids.filter((id) => !prev.includes(id))] : ids))
+  }, [])
+
+  const handleFieldFocus = (id: string) => handleSelect(id, false)
+
+  // ── Overlay canvas interactions ───────────────────────────────────────
+  const handleOverlayMove = (id: string, x: number, y: number) => moveWithSelection(id, x, y)
 
   const handleOverlayResize = useCallback((id: string, w: number, h: number) => {
     const img = state.overlayImages.find((o) => o.id === id)
@@ -160,28 +246,35 @@ export default function Home() {
     if (img) updateOverlayImage({ ...img, positionX, positionY, widthPct, heightPct, cropX, cropY, cropW, cropH })
   }, [state.overlayImages, updateOverlayImage])
 
-  const handleDeselect = useCallback(() => {
-    setFocusedFieldId(null)
-    setFocusedOverlayId(null)
-  }, [])
+  const handleDeselect = useCallback(() => setSelectedIds([]), [])
 
   // ── 레이어 패널에서 요소 선택 ─────────────────────────────────────────
-  const handleLayerSelect = useCallback((id: string) => {
-    if (state.fields.some((f) => f.id === id)) {
-      setFocusedFieldId(id)
-      setFocusedOverlayId(null)
-    } else {
-      setFocusedOverlayId(id)
-      setFocusedFieldId(null)
-    }
-  }, [state.fields])
+  const handleLayerSelect = useCallback((id: string) => setSelectedIds([id]), [])
+
+  // ── 다중 선택 정렬 / 색상 일괄 변경 ───────────────────────────────────
+  const handleAlign = (mode: AlignMode) => {
+    const targets = alignBoxes(selectedItems, mode, alignReference)
+    selectedItems.forEach((item) => {
+      const x = targets[item.id]
+      if (x === undefined || x === item.positionX) return
+      moveItem(item.id, x, item.positionY)
+    })
+  }
+
+  const handleSelectionColorChange = (color: string) => {
+    selectedFieldIds.forEach((id) => {
+      const field = effectiveFields.find((f) => f.id === id)
+      if (field && field.color !== color) handleUpdateField({ ...field, color })
+    })
+  }
 
   // ── 방향키로 선택 요소 이동 (1mm, Shift: 5mm) ─────────────────────────
   // 정방향(하단) 명패 기준 방향. 상단 반전본은 같은 좌표를 180도 회전해
   // 그리므로 화면상 자동으로 반대 방향으로 움직인다.
+  // 다중 선택 시에는 선택된 요소 전체가 상대 위치를 유지한 채 함께 움직인다.
   useEffect(() => {
     const handleArrowKey = (e: KeyboardEvent) => {
-      if (!focusedFieldId && !focusedOverlayId) return
+      if (selectedItems.length === 0) return
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
@@ -189,17 +282,7 @@ export default function Home() {
       if (!delta) return
       e.preventDefault()
 
-      if (focusedFieldId) {
-        const field = effectiveFields.find((f) => f.id === focusedFieldId)
-        if (field) handleMoveField(field.id, field.positionX + delta.dxPct, field.positionY + delta.dyPct)
-        return
-      }
-      const img = state.overlayImages.find((o) => o.id === focusedOverlayId)
-      if (img) {
-        const x = Math.max(0, Math.min(100 - img.widthPct, img.positionX + delta.dxPct))
-        const y = Math.max(0, Math.min(100 - img.heightPct, img.positionY + delta.dyPct))
-        handleOverlayMove(img.id, x, y)
-      }
+      moveSelectionBy(delta.dxPct, delta.dyPct)
     }
     window.addEventListener('keydown', handleArrowKey)
     return () => window.removeEventListener('keydown', handleArrowKey)
@@ -343,6 +426,8 @@ export default function Home() {
         selectedRowIndex={selectedRowIndex}
         applyToAll={applyToAll}
         hasPageOverride={hasPageOverride}
+        open={thumbnailOpen}
+        onOpenChange={setThumbnailOpen}
         onApplyToAllChange={setApplyToAll}
         onRowFieldChange={handleRowFieldChange}
         onClearPageOverride={() => clearPageFieldOverride(selectedRowIndex)}
@@ -370,7 +455,7 @@ export default function Home() {
             className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0 whitespace-nowrap"
           >
             <Upload className="w-3 h-3" />
-            {state.excelRows.length > 0 ? `파일 변경 (${state.excelRows.length}명)` : '엑셀 파일 선택'}
+            {state.excelRows.length > 0 ? `파일 변경 (${state.excelRows.length}명)` : '엑셀 파일 업로드'}
           </button>
           <input
             ref={excelInputRef}
@@ -421,6 +506,8 @@ export default function Home() {
           {/* 단축키 힌트 */}
           <span className="text-[10px] text-white/50 shrink-0 whitespace-nowrap">
             드래그: 이동 · 방향키: 1mm 이동 (<kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>: 5mm) · 핸들: 크기 조절 · 클릭→재클릭: 텍스트 편집 ·{' '}
+            빈 곳 드래그: 여러 개 선택 ·{' '}
+            <kbd className="bg-white/15 px-0.5 rounded">Ctrl</kbd>+클릭: 선택 추가 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Esc</kbd>: 종료 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>+이미지: 자르기 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Space</kbd>: 화면 이동
@@ -490,6 +577,20 @@ export default function Home() {
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseUp}
           >
+            {/* 다중 선택 시 정렬·색상 도구 모음 */}
+            {isMultiSelect && (
+              <MultiSelectToolbar
+                count={selectedItems.length}
+                textFieldCount={selectedFieldIds.length}
+                color={selectionColor}
+                reference={alignReference}
+                onReferenceChange={setAlignReference}
+                onAlign={handleAlign}
+                onColorChange={handleSelectionColorChange}
+                onClear={handleDeselect}
+              />
+            )}
+
             {/* Space 패닝: transform으로 캔버스 위치 이동 + 패닝 중 포인터 이벤트 차단 */}
             <div style={{
               pointerEvents: isPanMode ? 'none' : 'auto',
@@ -501,10 +602,12 @@ export default function Home() {
                 scale={scale}
                 focusedFieldId={focusedFieldId}
                 focusedOverlayId={focusedOverlayId}
+                selectedIds={selectedIds}
+                onMarqueeSelect={handleMarqueeSelect}
                 onMove={handleMoveField}
                 onResize={handleResizeField}
-                onFieldFocus={handleFieldFocus}
-                onOverlayFocus={handleOverlayFocus}
+                onFieldFocus={handleSelect}
+                onOverlayFocus={handleSelect}
                 onOverlayMove={handleOverlayMove}
                 onOverlayResize={handleOverlayResize}
                 onOverlayCrop={handleOverlayCrop}

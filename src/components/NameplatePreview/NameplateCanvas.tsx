@@ -5,6 +5,7 @@ import { DraggableTextField } from './DraggableTextField'
 import { DraggableOverlayImage } from './DraggableOverlayImage'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { getBackgroundImageCss, getBackgroundSize } from '@/lib/backgroundPresets'
+import { MarqueeRect, MARQUEE_MIN_PCT, SelectionBox, boxesInRect, normalizeRect } from '@/lib/selection'
 
 const SNAP_THRESHOLD = 2
 
@@ -178,10 +179,13 @@ type Props = {
   scale: number
   focusedFieldId: string | null
   focusedOverlayId: string | null
+  /** 다중 선택된 요소 id 목록 (텍스트·이미지 공통) */
+  selectedIds: string[]
+  onMarqueeSelect: (ids: string[], additive: boolean) => void
   onMove: (id: string, positionX: number, positionY: number) => void
   onResize: (id: string, widthPct: number, heightPct: number) => void
-  onFieldFocus: (id: string) => void
-  onOverlayFocus: (id: string) => void
+  onFieldFocus: (id: string, additive: boolean) => void
+  onOverlayFocus: (id: string, additive: boolean) => void
   onOverlayMove: (id: string, x: number, y: number) => void
   onOverlayResize: (id: string, w: number, h: number) => void
   onOverlayCrop: (id: string, positionX: number, positionY: number, widthPct: number, heightPct: number, cropX: number, cropY: number, cropW: number, cropH: number) => void
@@ -191,7 +195,7 @@ type Props = {
 
 export function NameplateCanvas({
   state, overrideFields, scale,
-  focusedFieldId, focusedOverlayId,
+  focusedFieldId, focusedOverlayId, selectedIds, onMarqueeSelect,
   onMove, onResize, onFieldFocus,
   onOverlayFocus, onOverlayMove, onOverlayResize, onOverlayCrop,
   onDeselect, onValueChange,
@@ -199,6 +203,7 @@ export function NameplateCanvas({
   const bottomRef = useRef<HTMLDivElement>(null)
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const [guides, setGuides] = useState<GuideLine[]>([])
+  const [marquee, setMarquee] = useState<MarqueeRect | null>(null)
 
   const { size, backgroundImage, overlayImages, previewData, layers } = state
   const fields = overrideFields ?? state.fields
@@ -221,14 +226,83 @@ export function NameplateCanvas({
     (id: string, rawX: number, rawY: number) => {
       const field = fields.find((f) => f.id === id)
       if (!field) return
+      // 다중 선택 상태에서는 그룹 전체가 함께 움직이므로 스냅을 적용하지 않는다
+      if (selectedIds.length > 1 && selectedIds.includes(id)) {
+        onMove(id, rawX, rawY)
+        return
+      }
       const { x, y, guides: newGuides } = calcSnap(rawX, rawY, id, fields, field.widthPct, field.heightPct)
       setGuides(newGuides)
       onMove(id, x, y)
     },
-    [fields, onMove]
+    [fields, onMove, selectedIds]
   )
 
   const handleDragEnd = useCallback(() => setGuides([]), [])
+
+  // ── 드래그 영역 선택(마퀴) ────────────────────────────────────────────
+  // 하단(정방향) 명패의 빈 배경에서 드래그를 시작하면 사각형이 그려지고,
+  // 놓는 순간 그 영역과 겹치는 요소들이 한 번에 선택된다.
+  const collectSelectableBoxes = useCallback((): SelectionBox[] => {
+    return effectiveLayers.flatMap((id): SelectionBox[] => {
+      const field = fields.find((f) => f.id === id)
+      if (field) {
+        return [{
+          id, positionX: field.positionX, positionY: field.positionY,
+          widthPct: field.widthPct, heightPct: field.heightPct,
+        }]
+      }
+      const overlay = overlayImages.find((o) => o.id === id)
+      if (overlay && overlayMatchesRow(overlay, previewData)) {
+        return [{
+          id, positionX: overlay.positionX, positionY: overlay.positionY,
+          widthPct: overlay.widthPct, heightPct: overlay.heightPct,
+        }]
+      }
+      return []
+    })
+  }, [effectiveLayers, fields, overlayImages, previewData])
+
+  const handleMarqueeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      const container = bottomRef.current
+      // 요소 위가 아니라 빈 배경에서 시작한 드래그만 영역 선택으로 처리
+      if (!container || e.target !== container || e.button !== 0) return
+      e.preventDefault()
+
+      const rect = container.getBoundingClientRect()
+      const toPctX = (clientX: number) => ((clientX - rect.left) / rect.width) * 100
+      const toPctY = (clientY: number) => ((clientY - rect.top) / rect.height) * 100
+      const startX = toPctX(e.clientX)
+      const startY = toPctY(e.clientY)
+      const additive = e.ctrlKey || e.metaKey || e.shiftKey
+
+      let current: MarqueeRect = { x: startX, y: startY, width: 0, height: 0 }
+      let dragged = false
+
+      const handleMouseMove = (ev: MouseEvent) => {
+        current = normalizeRect(startX, startY, toPctX(ev.clientX), toPctY(ev.clientY))
+        if (current.width > MARQUEE_MIN_PCT || current.height > MARQUEE_MIN_PCT) dragged = true
+        setMarquee(current)
+      }
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+        setMarquee(null)
+        if (!dragged) {
+          // 단순 클릭 — 선택 해제
+          if (!additive) onDeselect()
+          return
+        }
+        onMarqueeSelect(boxesInRect(collectSelectableBoxes(), current), additive)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    },
+    [collectSelectableBoxes, onMarqueeSelect, onDeselect]
+  )
 
   const bgStyle: React.CSSProperties = {
     backgroundImage: getBackgroundImageCss(backgroundImage),
@@ -294,7 +368,7 @@ export function NameplateCanvas({
               <div
                 ref={bottomRef}
                 style={halfStyle}
-                onClick={(e) => { if (e.target === bottomRef.current) onDeselect() }}
+                onMouseDown={handleMarqueeMouseDown}
               >
                 {effectiveLayers.map((id) => {
                   const field = fields.find((f) => f.id === id)
@@ -305,6 +379,7 @@ export function NameplateCanvas({
                         field={field}
                         value={previewData[field.label] ?? ''}
                         isFocused={focusedFieldId === field.id}
+                        isSelected={selectedIds.length > 1 && selectedIds.includes(field.id)}
                         onMove={handleMove}
                         onMoveRaw={onMove}
                         onResize={onResize}
@@ -322,6 +397,7 @@ export function NameplateCanvas({
                         key={overlay.id}
                         image={overlay}
                         isFocused={focusedOverlayId === overlay.id}
+                        isSelected={selectedIds.length > 1 && selectedIds.includes(overlay.id)}
                         onMove={onOverlayMove}
                         onResize={onOverlayResize}
                         onCrop={onOverlayCrop}
@@ -332,6 +408,23 @@ export function NameplateCanvas({
                   }
                   return null
                 })}
+
+                {/* 드래그 영역 선택 사각형 */}
+                {marquee && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${marquee.x}%`,
+                      top: `${marquee.y}%`,
+                      width: `${marquee.width}%`,
+                      height: `${marquee.height}%`,
+                      border: '1px dashed #2563eb',
+                      background: 'rgba(37, 99, 235, 0.12)',
+                      pointerEvents: 'none',
+                      zIndex: 20,
+                    }}
+                  />
+                )}
               </div>
             </div>
 

@@ -1,5 +1,4 @@
 'use client'
-import { useState } from 'react'
 import { LayoutGrid, X, Square, ChevronsRight } from 'lucide-react'
 import { NameplateState } from '@/types/nameplate'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
@@ -11,6 +10,8 @@ type Props = {
   selectedRowIndex: number
   applyToAll: boolean
   hasPageOverride: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onApplyToAllChange: (v: boolean) => void
   onRowFieldChange: (label: string, value: string) => void
   onClearPageOverride: () => void
@@ -24,6 +25,8 @@ export function ThumbnailPanel({
   selectedRowIndex,
   applyToAll,
   hasPageOverride,
+  open,
+  onOpenChange,
   onApplyToAllChange,
   onRowFieldChange,
   onClearPageOverride,
@@ -31,14 +34,13 @@ export function ThumbnailPanel({
   onSelect,
   onApplyCurrentPageToAll,
 }: Props) {
-  const [open, setOpen] = useState(false)
   const hasData = state.excelRows.length > 0
 
   return (
     <>
       {/* 토글 버튼 — 우측 고정 (사용법 버튼 위) */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => onOpenChange(!open)}
         className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
         style={{
           right: open ? PANEL_WIDTH : 0,
