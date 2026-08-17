@@ -12,6 +12,13 @@ export const SITE_DESCRIPTION =
   '접어서 쓰는 양면(상하 반전) 배치를 자동으로 잡아 주고, 명패 규격·글꼴·배경 이미지를 자유롭게 조절할 수 있습니다. ' +
   '설치 없이 브라우저에서 바로 쓸 수 있습니다.'
 
+/**
+ * 네이버 서치어드바이저 소유 확인 값.
+ * 어차피 페이지 소스에 그대로 드러나는 공개 값이라 코드에 담아 둔다.
+ * (환경 변수 NEXT_PUBLIC_NAVER_SITE_VERIFICATION로 덮어쓸 수 있다)
+ */
+export const NAVER_SITE_VERIFICATION = 'e74387cdd2321bb9fcc99cd69ecc7fecf3bbff5f'
+
 export const GUIDE_TITLE = '명패 만드는 방법 — 단계별 사용 설명서'
 
 export const GUIDE_DESCRIPTION =

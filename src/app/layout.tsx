@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { SessionProvider } from '@/components/SessionProvider'
 import {
+  NAVER_SITE_VERIFICATION,
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
   SITE_NAME,
@@ -44,12 +45,15 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
   },
-  // 서치 콘솔·서치어드바이저에서 받은 값을 환경 변수로 넣으면 소유 확인이 끝난다
+  // 검색엔진 소유 확인.
+  // 네이버는 받은 값을 코드에 담아 뒀고, 구글은 public/의 확인 파일로 끝냈다.
+  // (구글도 메타 태그로 하고 싶으면 환경 변수만 채우면 된다)
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-    other: process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION
-      ? { 'naver-site-verification': process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION }
-      : {},
+    other: {
+      'naver-site-verification':
+        process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION || NAVER_SITE_VERIFICATION,
+    },
   },
 }
 

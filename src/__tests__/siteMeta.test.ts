@@ -1,5 +1,6 @@
 import {
   FALLBACK_SITE_URL,
+  NAVER_SITE_VERIFICATION,
   SITEMAP_PATHS,
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
@@ -66,6 +67,12 @@ describe('검색 정보', () => {
 
   it('사이트맵에 실제로 있는 페이지만 넣는다', () => {
     expect([...SITEMAP_PATHS]).toEqual(['/', '/guide'])
+  })
+})
+
+describe('NAVER_SITE_VERIFICATION', () => {
+  it('서치어드바이저가 준 형식 그대로다 — 한 글자만 달라도 확인이 실패한다', () => {
+    expect(NAVER_SITE_VERIFICATION).toMatch(/^[a-f0-9]{40}$/)
   })
 })
 
