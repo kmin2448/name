@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState, useEffect } from 'react'
+import { Trash2 } from 'lucide-react'
 import { TextFieldConfig, NameplateSize, OverlayImage } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { renderItemsStatic } from '@/components/NameplatePreview/NameplateCanvas'
@@ -19,6 +20,7 @@ type Props = {
   layers: string[]
   selectedIndex: number
   onSelect: (index: number) => void
+  onDelete: (index: number) => void
 }
 
 function getEffectiveFields(
@@ -66,7 +68,7 @@ function ThumbnailFace({
 }
 
 export function PageThumbnails({
-  rows, fields, pageFieldOverrides, size, backgroundImage, overlayImages, layers, selectedIndex, onSelect,
+  rows, fields, pageFieldOverrides, size, backgroundImage, overlayImages, layers, selectedIndex, onSelect, onDelete,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [thumbWidth, setThumbWidth] = useState(0)
@@ -114,7 +116,7 @@ export function PageThumbnails({
               <div
                 key={i}
                 onClick={() => onSelect(i)}
-                className="cursor-pointer rounded overflow-hidden transition-all"
+                className="group relative cursor-pointer rounded overflow-hidden transition-all"
                 style={{ outline: outlineStyle, outlineOffset: 1 }}
               >
                 <ThumbnailFace
@@ -126,6 +128,20 @@ export function PageThumbnails({
                   layers={layers}
                   thumbWidth={thumbWidth}
                 />
+                <span className="absolute bottom-1 left-1 px-1 rounded bg-black/45 text-white text-[10px] leading-4 tabular-nums pointer-events-none">
+                  {i + 1}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation() // 썸네일 선택과 겹치지 않도록
+                    onDelete(i)
+                  }}
+                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded bg-black/45 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-red-500 transition-opacity"
+                  title={`${i + 1}번 페이지 삭제`}
+                  aria-label={`${i + 1}번 페이지 삭제`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
               </div>
             )
           })}

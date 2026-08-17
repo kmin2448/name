@@ -8,10 +8,12 @@ type Props = {
   field: TextFieldConfig
   value: string
   isFocused: boolean
+  /** 다중 선택에 포함된 상태 (단독 선택인 isFocused와 구분) */
+  isSelected?: boolean
   onMove: (id: string, positionX: number, positionY: number) => void
   onMoveRaw?: (id: string, positionX: number, positionY: number) => void
   onResize: (id: string, widthPct: number, heightPct: number) => void
-  onFocus: (id: string) => void
+  onFocus: (id: string, additive: boolean) => void
   onDragEnd?: () => void
   onValueChange?: (value: string) => void
   containerRef: React.RefObject<HTMLDivElement>
@@ -27,7 +29,8 @@ const CORNER_CURSORS: Record<Corner, string> = {
 const HANDLE_SIZE = 9
 
 export function DraggableTextField({
-  field, value, isFocused, onMove, onMoveRaw, onResize, onFocus, onDragEnd, onValueChange, containerRef,
+  field, value, isFocused, isSelected = false,
+  onMove, onMoveRaw, onResize, onFocus, onDragEnd, onValueChange, containerRef,
 }: Props) {
   const isDragging = useRef(false)
   const isResizing = useRef(false)
@@ -58,7 +61,8 @@ export function DraggableTextField({
 
       wasFocused.current = isFocused
       hasMoved.current = false
-      onFocus(field.id)
+      // Ctrl(⌘) + 클릭 = 다중 선택에 추가/제외
+      onFocus(field.id, e.ctrlKey || e.metaKey)
 
       isDragging.current = true
       startRef.current = {
@@ -178,6 +182,7 @@ export function DraggableTextField({
 
   return (
     <div
+      data-canvas-item
       onMouseDown={handleDragMouseDown}
       style={{
         position: 'absolute',
@@ -187,9 +192,12 @@ export function DraggableTextField({
         height: `${field.heightPct}%`,
         cursor: isEditing ? 'text' : 'move',
         boxSizing: 'border-box',
-        border: isFocused
-          ? '1.5px dashed #475569'
-          : '1px dashed rgba(31, 92, 153, 0.25)',
+        border: isSelected
+          ? '1.5px solid #2563eb'
+          : isFocused
+            ? '1.5px dashed #475569'
+            : '1px dashed rgba(31, 92, 153, 0.25)',
+        background: isSelected ? 'rgba(37, 99, 235, 0.08)' : undefined,
         overflow: 'visible',
         userSelect: 'none',
       }}

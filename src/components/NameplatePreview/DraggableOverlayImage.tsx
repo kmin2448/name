@@ -20,6 +20,8 @@ type StartState = {
 type Props = {
   image: OverlayImage
   isFocused: boolean
+  /** 다중 선택에 포함된 상태 (단독 선택인 isFocused와 구분) */
+  isSelected?: boolean
   onMove: (id: string, x: number, y: number) => void
   onResize: (id: string, w: number, h: number) => void
   // positionX/Y and widthPct/heightPct included so left/top drags update in one dispatch
@@ -29,7 +31,7 @@ type Props = {
     widthPct: number, heightPct: number,
     cropX: number, cropY: number, cropW: number, cropH: number
   ) => void
-  onFocus: (id: string) => void
+  onFocus: (id: string, additive: boolean) => void
   containerRef: React.RefObject<HTMLDivElement>
 }
 
@@ -38,7 +40,7 @@ function clamp(v: number, min: number, max: number) {
 }
 
 export function DraggableOverlayImage({
-  image, isFocused, onMove, onResize, onCrop, onFocus, containerRef,
+  image, isFocused, isSelected = false, onMove, onResize, onCrop, onFocus, containerRef,
 }: Props) {
   const [isShifted, setIsShifted] = useState(false)
   const startRef = useRef<StartState>({
@@ -70,7 +72,8 @@ export function DraggableOverlayImage({
   const handleDragMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    onFocus(image.id)
+    // Ctrl(⌘) + 클릭 = 다중 선택에 추가/제외 (Shift는 자르기 모드에 사용됨)
+    onFocus(image.id, e.ctrlKey || e.metaKey)
     captureStart(e)
 
     const handleMouseMove = (ev: MouseEvent) => {
@@ -186,10 +189,12 @@ export function DraggableOverlayImage({
     document.addEventListener('mouseup', up)
   }, [image.id, captureStart, onCrop, containerRef])
 
-  const borderColor = isFocused
-    ? isShifted ? '#f97316' : '#475569'
-    : 'rgba(71,85,105,0.18)'
-  const borderStyle = isFocused ? '1.5px dashed' : '1px dashed'
+  const borderColor = isSelected
+    ? '#2563eb'
+    : isFocused
+      ? isShifted ? '#f97316' : '#475569'
+      : 'rgba(71,85,105,0.18)'
+  const borderStyle = isSelected ? '1.5px solid' : isFocused ? '1.5px dashed' : '1px dashed'
 
   const imgLeft = `${-(cropX / cropW) * 100}%`
   const imgTop  = `${-(cropY / cropH) * 100}%`
@@ -205,6 +210,7 @@ export function DraggableOverlayImage({
 
   return (
     <div
+      data-canvas-item
       onMouseDown={handleDragMouseDown}
       style={{
         position: 'absolute',
@@ -233,6 +239,11 @@ export function DraggableOverlayImage({
           userSelect: 'none',
         }}
       />
+
+      {/* 다중 선택 표시 */}
+      {isSelected && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(37,99,235,0.15)', pointerEvents: 'none' }} />
+      )}
 
       {/* Normal mode: resize handle (bottom-right) */}
       {isFocused && !isShifted && (

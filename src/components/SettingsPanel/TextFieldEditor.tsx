@@ -9,20 +9,21 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Bold, AlignLeft, AlignCenter, AlignRight, X, Plus, ChevronDown, RotateCcw, Bookmark } from 'lucide-react'
 import { useLocalFonts } from '@/hooks/useLocalFonts'
+import { FONT_SIZE_MAX, FONT_SIZE_MIN } from '@/lib/fontSize'
 
 function FontSizeInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [draft, setDraft] = useState<string | null>(null)
   return (
     <input
       type="number"
-      min={8}
-      max={150}
+      min={FONT_SIZE_MIN}
+      max={FONT_SIZE_MAX}
       value={draft !== null ? draft : String(value)}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
         if (draft !== null) {
           const v = parseInt(draft, 10)
-          if (!isNaN(v)) onChange(Math.min(150, Math.max(8, v)))
+          if (!isNaN(v)) onChange(Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, v)))
           setDraft(null)
         }
       }}
@@ -184,8 +185,8 @@ export function TextFieldEditor({ fields, focusedId, onUpdate, onRemove, onAdd, 
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground w-10 shrink-0">크기</span>
               <Slider
-                min={8}
-                max={150}
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
                 step={1}
                 value={[field.fontSize]}
                 onValueChange={([v]) => onUpdate({ ...field, fontSize: v })}
