@@ -21,6 +21,7 @@ import { createPageRow, nextSelectedIndex } from '@/lib/pageRows'
 import { RosterPayload, extractRosterPayload, mergeRestoredState } from '@/lib/rosters'
 import { ApplyMode, DesignImages, DesignPayload, applyDesign } from '@/lib/designs'
 import { LibraryPanel } from '@/components/LibraryPanel'
+import { RightPanel, nextOpenPanel } from '@/lib/panels'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
 import { stepFontSize } from '@/lib/fontSize'
@@ -80,11 +81,13 @@ export default function Home() {
   // 선택된 요소 id 목록 — 1개면 단일 선택, 2개 이상이면 다중 선택
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [alignReference, setAlignReference] = useState<AlignReference>('selection')
-  const [thumbnailOpen, setThumbnailOpen] = useState(false)
-  const [libraryOpen, setLibraryOpen] = useState(false)
-  const [helpOpen, setHelpOpen] = useState(false)
-  // 오른쪽 패널이 하나라도 열려 있으면 버튼 옆 안내 문구가 패널을 가리므로 숨긴다
-  const showPanelHints = !thumbnailOpen && !libraryOpen && !helpOpen
+  // 오른쪽 패널(썸네일·내 자료·사용법)은 서로 겹치므로 한 번에 하나만 연다
+  const [openPanel, setOpenPanel] = useState<RightPanel | null>(null)
+  const setPanelOpen = useCallback((panel: RightPanel, open: boolean) => {
+    setOpenPanel((current) => nextOpenPanel(current, panel, open))
+  }, [])
+  // 패널이 하나라도 열려 있으면 버튼 옆 안내 문구가 패널을 가리므로 숨긴다
+  const showPanelHints = openPanel === null
   const [zoom, setZoom] = useState(DEFAULT_CANVAS_VIEW.zoom)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
@@ -143,7 +146,7 @@ export default function Home() {
       setPreviewData(result.rows[0])
       setSelectedRowIndex(0)
       // 업로드 직후 바로 페이지 목록을 확인할 수 있도록 썸네일 패널을 연다
-      setThumbnailOpen(true)
+      setOpenPanel('thumbnail')
     }
     result.newColumns.forEach((col) => addFieldWithLabel(col))
   }
@@ -201,7 +204,8 @@ export default function Home() {
     setSelectedRowIndex(payload.excelRows.length > 0 ? 0 : -1)
     setSelectedIds([])
     setApplyToAll(false)
-    setThumbnailOpen(true)
+    // 불러온 명단을 바로 확인하도록 썸네일로 넘어간다 ('내 자료' 창은 자동으로 닫힌다)
+    setOpenPanel('thumbnail')
   }
 
   /** 저장해 둔 명패 디자인을 현재 편집 화면에 적용한다 */
@@ -516,8 +520,8 @@ export default function Home() {
       <Toaster position="top-right" richColors />
       <VisitCounter />
       <LibraryPanel
-        open={libraryOpen}
-        onOpenChange={setLibraryOpen}
+        open={openPanel === 'library'}
+        onOpenChange={(open) => setPanelOpen('library', open)}
         showHint={showPanelHints}
         state={state}
         getRosterPayload={() => extractRosterPayload(state)}
@@ -525,14 +529,18 @@ export default function Home() {
         onApplyDesign={handleApplyDesign}
         pageCount={state.excelRows.length}
       />
-      <HelpPanel onOpenChange={setHelpOpen} showHint={showPanelHints} />
+      <HelpPanel
+        open={openPanel === 'help'}
+        onOpenChange={(open) => setPanelOpen('help', open)}
+        showHint={showPanelHints}
+      />
       <ThumbnailPanel
         state={state}
         selectedRowIndex={selectedRowIndex}
         applyToAll={applyToAll}
         hasPageOverride={hasPageOverride}
-        open={thumbnailOpen}
-        onOpenChange={setThumbnailOpen}
+        open={openPanel === 'thumbnail'}
+        onOpenChange={(open) => setPanelOpen('thumbnail', open)}
         onApplyToAllChange={setApplyToAll}
         onRowFieldChange={handleRowFieldChange}
         onClearPageOverride={() => clearPageFieldOverride(selectedRowIndex)}

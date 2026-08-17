@@ -1,5 +1,4 @@
 ﻿'use client'
-import { useState } from 'react'
 import { BookOpen, X } from 'lucide-react'
 
 const PANEL_WIDTH = 480
@@ -74,6 +73,7 @@ const STEPS = [
 
 const TIPS = [
   '화면 오른쪽 가장자리에 버튼 세 개가 붙어 있습니다. 위에서부터 "썸네일"(페이지 목록), "내 자료"(명단·디자인 저장), 오른쪽 아래 책 모양 아이콘(이 사용 방법 창)입니다. 버튼 옆 안내 문구는 패널을 열면 화면을 가리지 않도록 자동으로 사라집니다.',
+  '세 창은 한 번에 하나만 열립니다. 창을 띄운 채 다른 버튼을 누르면 먼저 열려 있던 창은 자동으로 닫히므로, 굳이 닫고 나서 누를 필요가 없습니다.',
   '엑셀 업로드 버튼은 상단 헤더뿐 아니라 썸네일 패널 위쪽에도 있습니다. 페이지 목록을 보면서 바로 다른 파일로 바꿀 수 있습니다.',
   '편집 화면 배율과 이동 위치는 브라우저에 저장됩니다. 배율이 어긋났다면 헤더의 되돌리기 버튼으로 기본 화면(150% · 좌상단)으로 한 번에 돌아오세요.',
   '요소를 선택하고 방향키를 누르면 1mm씩, Shift+방향키는 5mm씩 정밀하게 이동합니다. 위쪽 반전본은 같은 좌표를 회전해 그리므로 자동으로 반대 방향으로 움직입니다.',
@@ -97,21 +97,15 @@ const PRINT_TIPS = [
 ]
 
 type Props = {
-  /** 다른 패널의 안내 문구를 가리지 않도록 열림 상태를 바깥에서도 알 수 있게 한다 */
-  onOpenChange?: (open: boolean) => void
+  /** 오른쪽 패널은 한 번에 하나만 열리므로 열림 상태는 바깥에서 관리한다 */
+  open: boolean
+  onOpenChange: (open: boolean) => void
   /** 열린 패널 위에 글자가 겹치지 않도록, 패널이 모두 닫혔을 때만 안내 문구를 보여준다 */
   showHint?: boolean
 }
 
-export function HelpPanel({ onOpenChange, showHint = false }: Props) {
-  const [open, setOpen] = useState(false)
-
-  const toggle = () => {
-    setOpen((v) => {
-      onOpenChange?.(!v)
-      return !v
-    })
-  }
+export function HelpPanel({ open, onOpenChange, showHint = false }: Props) {
+  const toggle = () => onOpenChange(!open)
 
   return (
     <>
