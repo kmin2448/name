@@ -2,6 +2,7 @@
 import { useReducer, useCallback, useEffect, useRef } from 'react'
 import { NameplateState, NameplateSize, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DEFAULT_SIZE, DEFAULT_FIELDS, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
+import { removePageOverrides } from '@/lib/pageRows'
 
 const CUSTOM_DEFAULTS_KEY = 'nameplate_default_fields'
 // 명단(excelRows) 및 모든 편집 내용을 새로고침 후에도 유지하기 위한 전체 상태 저장 키
@@ -79,6 +80,8 @@ type Action =
   | { type: 'SET_PREVIEW_DATA'; payload: Record<string, string> }
   | { type: 'SET_EXCEL_ROWS'; payload: Record<string, string>[] }
   | { type: 'UPDATE_EXCEL_ROW'; payload: { index: number; data: Record<string, string> } }
+  | { type: 'ADD_EXCEL_ROW'; payload: Record<string, string> }
+  | { type: 'REMOVE_EXCEL_ROW'; payload: number }
   | { type: 'SET_FIELD_OVERRIDE_FOR_PAGE'; payload: { pageIndex: number; field: TextFieldConfig } }
   | { type: 'MOVE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; positionX: number; positionY: number } }
   | { type: 'RESIZE_FIELD_FOR_PAGE'; payload: { pageIndex: number; id: string; widthPct: number; heightPct: number } }
@@ -207,6 +210,18 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       const rows = [...state.excelRows]
       rows[action.payload.index] = action.payload.data
       return { ...state, excelRows: rows }
+    }
+    case 'ADD_EXCEL_ROW':
+      // 새 페이지는 페이지별 서식 없이 추가되므로 전체 서식이 그대로 적용된다
+      return { ...state, excelRows: [...state.excelRows, action.payload] }
+    case 'REMOVE_EXCEL_ROW': {
+      const index = action.payload
+      if (index < 0 || index >= state.excelRows.length) return state
+      return {
+        ...state,
+        excelRows: state.excelRows.filter((_, i) => i !== index),
+        pageFieldOverrides: removePageOverrides(state.pageFieldOverrides, index),
+      }
     }
     case 'SET_FIELD_OVERRIDE_FOR_PAGE': {
       const { pageIndex, field } = action.payload
@@ -375,6 +390,14 @@ export function useNameplateState() {
       dispatch({ type: 'UPDATE_EXCEL_ROW', payload: { index, data } }),
     []
   )
+  const addExcelRow = useCallback(
+    (row: Record<string, string>) => dispatch({ type: 'ADD_EXCEL_ROW', payload: row }),
+    []
+  )
+  const removeExcelRow = useCallback(
+    (index: number) => dispatch({ type: 'REMOVE_EXCEL_ROW', payload: index }),
+    []
+  )
   const setFieldOverrideForPage = useCallback(
     (pageIndex: number, field: TextFieldConfig) =>
       dispatch({ type: 'SET_FIELD_OVERRIDE_FOR_PAGE', payload: { pageIndex, field } }),
@@ -425,7 +448,7 @@ export function useNameplateState() {
     state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
     setFields, addField, addFieldWithLabel,
     updateField, removeField, moveField, resizeField,
-    setPreviewData, setExcelRows, updateExcelRow,
+    setPreviewData, setExcelRows, updateExcelRow, addExcelRow, removeExcelRow,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
     moveLayer, setLayers, setShowBorder, resetFields, saveAsDefault, applyFieldsToAll,
   }

@@ -15,7 +15,8 @@ import { MultiSelectToolbar } from '@/components/MultiSelectToolbar'
 import { VisitCounter } from '@/components/VisitCounter'
 import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
-import { MM_TO_PX } from '@/lib/sizeConstants'
+import { MM_TO_PX, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
+import { createPageRow, nextSelectedIndex } from '@/lib/pageRows'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
 import { stepFontSize } from '@/lib/fontSize'
@@ -60,6 +61,8 @@ export default function Home() {
     setPreviewData,
     setExcelRows,
     updateExcelRow,
+    addExcelRow,
+    removeExcelRow,
     setFieldOverrideForPage,
     moveFieldForPage,
     resizeFieldForPage,
@@ -141,6 +144,48 @@ export default function Home() {
   const handleThumbnailSelect = (index: number) => {
     setSelectedRowIndex(index)
     setPreviewData(state.excelRows[index])
+  }
+
+  /** 현재 서식 그대로 새 페이지를 추가한다. 모든 페이지가 같은 값인 항목은 자동으로 채운다. */
+  const handleAddPage = () => {
+    const labels = state.fields.map((f) => f.label)
+    const newRow = createPageRow(state.excelRows, labels)
+    const filled = Object.keys(newRow).filter((label) => newRow[label].trim())
+
+    addExcelRow(newRow)
+    setSelectedRowIndex(state.excelRows.length)
+    setPreviewData(newRow)
+    // 전체 적용 모드로 두면 새 페이지에 입력한 이름이 모든 페이지를 덮어쓴다
+    setApplyToAll(false)
+
+    toast.success(
+      filled.length > 0
+        ? `새 페이지가 추가되었습니다. 공통 항목(${filled.join(', ')})은 자동 입력했습니다.`
+        : '새 페이지가 추가되었습니다.'
+    )
+  }
+
+  const handleDeletePage = (index: number) => {
+    const row = state.excelRows[index]
+    if (!row) return
+
+    const name = row['이름']?.trim()
+    const label = name ? `${index + 1}번 페이지(${name})` : `${index + 1}번 페이지`
+    if (!window.confirm(`${label}를 삭제할까요? 되돌릴 수 없습니다.`)) return
+
+    const newLength = state.excelRows.length - 1
+    const nextIndex = nextSelectedIndex(selectedRowIndex, index, newLength)
+
+    removeExcelRow(index)
+    setSelectedRowIndex(nextIndex)
+    // 남은 페이지가 없으면 샘플 데이터로 미리보기를 되돌린다
+    setPreviewData(
+      nextIndex >= 0
+        ? state.excelRows.filter((_, i) => i !== index)[nextIndex]
+        : SAMPLE_PREVIEW_DATA
+    )
+
+    toast.success(`${index + 1}번 페이지를 삭제했습니다.`)
   }
 
   const handleRowFieldChange = (fieldLabel: string, value: string) => {
@@ -449,6 +494,8 @@ export default function Home() {
         onToggleBorder={() => setShowBorder(!state.showBorder)}
         onSelect={handleThumbnailSelect}
         onApplyCurrentPageToAll={() => applyFieldsToAll(effectiveFields)}
+        onAddPage={handleAddPage}
+        onDeletePage={handleDeletePage}
       />
       <div className="h-screen flex flex-col">
         <header className="bg-[#475569] text-white shrink-0 flex items-center gap-1.5 px-4 py-2 overflow-x-auto">

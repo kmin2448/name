@@ -1,5 +1,5 @@
 'use client'
-import { LayoutGrid, X, Square, ChevronsRight } from 'lucide-react'
+import { LayoutGrid, X, Square, ChevronsRight, Plus, Trash2 } from 'lucide-react'
 import { NameplateState } from '@/types/nameplate'
 import { PageThumbnails } from '@/components/NameplatePreview/PageThumbnails'
 
@@ -18,6 +18,8 @@ type Props = {
   onToggleBorder: () => void
   onSelect: (index: number) => void
   onApplyCurrentPageToAll: () => void
+  onAddPage: () => void
+  onDeletePage: (index: number) => void
 }
 
 export function ThumbnailPanel({
@@ -33,6 +35,8 @@ export function ThumbnailPanel({
   onToggleBorder,
   onSelect,
   onApplyCurrentPageToAll,
+  onAddPage,
+  onDeletePage,
 }: Props) {
   const hasData = state.excelRows.length > 0
 
@@ -82,9 +86,18 @@ export function ThumbnailPanel({
           </div>
 
           {!hasData ? (
-            <p className="text-xs text-gray-400 text-center py-12">
-              엑셀 파일을 업로드하면<br />썸네일이 표시됩니다.
-            </p>
+            <div className="py-12 flex flex-col items-center gap-3">
+              <p className="text-xs text-gray-400 text-center">
+                엑셀 파일을 업로드하면<br />썸네일이 표시됩니다.
+              </p>
+              <button
+                onClick={onAddPage}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[#475569] text-white hover:bg-[#334155] active:bg-[#1e293b] transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                빈 페이지로 시작하기
+              </button>
+            </div>
           ) : (
             <>
               {/* 데이터 편집 */}
@@ -107,6 +120,13 @@ export function ThumbnailPanel({
                         커스텀 취소 ✕
                       </button>
                     )}
+                    <button
+                      onClick={() => onDeletePage(selectedRowIndex)}
+                      className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-gray-200 bg-white text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                      title={`${selectedRowIndex + 1}번 페이지 삭제`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                     <button
                       onClick={onToggleBorder}
                       className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border transition-colors ${
@@ -179,6 +199,16 @@ export function ThumbnailPanel({
                 </div>
               </div>
 
+              {/* 페이지 추가 — 전체 서식이 그대로 적용되고 공통 항목은 자동 입력된다 */}
+              <button
+                onClick={onAddPage}
+                className="w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded border border-dashed border-[#475569] text-[#475569] hover:bg-[#475569] hover:text-white transition-colors"
+                title="현재 서식 그대로 새 페이지를 추가합니다 (공통 항목은 자동 입력)"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                새 페이지 추가
+              </button>
+
               {/* 페이지 썸네일 */}
               <PageThumbnails
                 rows={state.excelRows}
@@ -190,6 +220,7 @@ export function ThumbnailPanel({
                 layers={state.layers}
                 selectedIndex={selectedRowIndex}
                 onSelect={onSelect}
+                onDelete={onDeletePage}
               />
             </>
           )}
