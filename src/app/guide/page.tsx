@@ -50,6 +50,55 @@ export default function GuidePage() {
 
           <hr className="my-6 border-gray-100" />
 
+          <h2 className="text-base font-bold text-gray-800 mb-2.5">이럴 때 씁니다</h2>
+          <ul className="space-y-2 mb-4">
+            {[
+              '엑셀 명단으로 명패를 자동으로 만들고 싶을 때',
+              '명패 매크로(엑셀 VBA)를 직접 짜는 대신 바로 쓰고 싶을 때',
+              '행사·세미나·회의 좌석 명패를 한 번에 인쇄해야 할 때',
+              '접어서 세우는 양면 명패가 필요할 때',
+              '사람마다 소속·직책이 달라 한 장씩 손보기 번거로울 때',
+            ].map((useCase) => (
+              <li
+                key={useCase}
+                className="flex gap-2 text-[13px] text-gray-500 leading-relaxed"
+              >
+                <span className="text-[#475569] shrink-0">•</span>
+                <span>{useCase}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[13px] text-gray-500 leading-relaxed">
+            명패를 만들 때 흔히 엑셀 매크로를 짜거나 워드 라벨 기능으로 한 장씩 맞추지만, 사람 수가
+            늘면 손이 많이 갑니다. 이 도구는 <b className="font-medium text-gray-600">엑셀 명단을
+            그대로 읽어</b> 사람 수만큼 명패를 자동으로 만들어 주므로, 매크로를 따로 만들 필요가
+            없습니다.
+          </p>
+
+          <hr className="my-6 border-gray-100" />
+
+          <h2 className="text-base font-bold text-gray-800 mb-2.5">명패용 엑셀 작성 방법</h2>
+          <p className="text-[13px] text-gray-500 leading-relaxed mb-2">
+            엑셀은 아주 단순하게 적으면 됩니다. 상단의 <b className="font-medium text-gray-600">
+            양식 다운로드</b>로 받은 파일에 그대로 채워 넣는 것이 가장 빠릅니다.
+          </p>
+          <ul className="space-y-2">
+            {[
+              '1행에는 항목 이름을 적습니다. 예: 프로그램명, 소속, 이름, 직책',
+              '2행부터 한 줄에 한 사람씩 적습니다. 한 줄이 명패 한 장이 됩니다.',
+              '열 이름이 화면의 항목 이름과 같으면 자동으로 연결됩니다.',
+              '모두 같은 값을 쓰는 항목(예: 프로그램명)도 줄마다 적어 두면 됩니다.',
+              '빈 칸으로 두면 그 자리는 비워진 채로 명패가 만들어집니다.',
+            ].map((rule) => (
+              <li key={rule} className="flex gap-2 text-[13px] text-gray-500 leading-relaxed">
+                <span className="text-[#475569] shrink-0">•</span>
+                <span>{rule}</span>
+              </li>
+            ))}
+          </ul>
+
+          <hr className="my-6 border-gray-100" />
+
           <h2 className="text-base font-bold text-gray-800 mb-4">단계별 사용법</h2>
           <ol className="space-y-5">
             {STEPS.map((step) => (

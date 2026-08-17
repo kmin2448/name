@@ -51,7 +51,17 @@ describe('resolveSiteUrl', () => {
 
 describe('검색 정보', () => {
   it('요청한 핵심 키워드가 모두 들어 있다', () => {
-    for (const keyword of ['명패', '명패 제작', '명패 매크로', '명패 프린트', '명패 인쇄', '명패 자동화']) {
+    for (const keyword of [
+      '명패',
+      '명패 제작',
+      '명패 매크로',
+      '명패 프린트',
+      '명패 인쇄',
+      '명패 자동화',
+      '명패 만들기',
+      '명패 자동 만들기',
+      '명패 엑셀 작성',
+    ]) {
       expect(SITE_KEYWORDS).toContain(keyword)
     }
   })
