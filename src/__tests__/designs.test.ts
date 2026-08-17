@@ -13,7 +13,13 @@ import {
   toDesignRow,
 } from '@/lib/designs'
 import { base64ByteLength, parseDataUrl } from '@/lib/googleDrive'
-import { grantedDriveScope } from '@/lib/googleScopes'
+import {
+  BASE_SCOPE,
+  DRIVE_SCOPE,
+  DRIVE_UPGRADE_AUTH_PARAMS,
+  DRIVE_UPGRADE_SCOPE,
+  grantedDriveScope,
+} from '@/lib/googleScopes'
 import { DESIGN_COLUMN, designRange } from '@/constants/sheets'
 import { initialState } from '@/hooks/useNameplateState'
 import { NameplateState, OverlayImage, TextFieldConfig } from '@/types/nameplate'
@@ -289,12 +295,33 @@ describe('grantedDriveScope', () => {
     ).toBe(true)
   })
 
-  it('동의 화면에서 드라이브만 체크 해제하면 false (로그인 자체는 성공)', () => {
-    expect(grantedDriveScope('openid email profile')).toBe(false)
+  it('기본 로그인 범위만 받은 상태는 false (로그인 자체는 성공)', () => {
+    expect(grantedDriveScope(BASE_SCOPE)).toBe(false)
     expect(grantedDriveScope(undefined)).toBe(false)
   })
 
   it('비슷한 이름의 다른 범위는 인정하지 않는다', () => {
     expect(grantedDriveScope('https://www.googleapis.com/auth/drive.file.readonly')).toBe(false)
+  })
+})
+
+describe('증분 인증 범위', () => {
+  it('기본 로그인 범위에는 드라이브 권한이 들어 있지 않다', () => {
+    expect(BASE_SCOPE).toBe('openid email profile')
+    expect(grantedDriveScope(BASE_SCOPE)).toBe(false)
+  })
+
+  it('권한 추가 요청 범위는 기본 범위에 드라이브만 더한 값이다', () => {
+    expect(DRIVE_UPGRADE_SCOPE).toBe(`${BASE_SCOPE} ${DRIVE_SCOPE}`)
+    expect(grantedDriveScope(DRIVE_UPGRADE_SCOPE)).toBe(true)
+  })
+
+  it('권한 추가 요청은 기존 승인 범위를 유지하고 refresh token을 다시 받는다', () => {
+    expect(DRIVE_UPGRADE_AUTH_PARAMS).toEqual({
+      scope: DRIVE_UPGRADE_SCOPE,
+      include_granted_scopes: 'true',
+      access_type: 'offline',
+      prompt: 'consent',
+    })
   })
 })

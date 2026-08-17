@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Save, Trash2, Download, Pencil } from 'lucide-react'
 import { ApplyMode, DesignImages, DesignPayload, DesignSummary, MAX_DESIGNS } from '@/lib/designs'
+import { DRIVE_UPGRADE_AUTH_PARAMS } from '@/lib/googleScopes'
 import { NameplateState } from '@/types/nameplate'
 import { formatSavedAt, readError } from '@/components/library/shared'
 
@@ -142,24 +143,30 @@ export function DesignLibrary({ state, onApply, hasDriveScope }: Props) {
     }
   }
 
-  // 로그인은 했지만 동의 화면에서 드라이브 항목을 체크 해제한 경우
+  // 아직 드라이브 권한을 요청하지 않았거나, 요청했지만 승인하지 않은 경우.
+  // 로그인 단계에서는 권한을 묻지 않으므로 대부분 여기서 처음 만나게 된다.
   if (!hasDriveScope) {
     return (
       <div className="py-8 flex flex-col items-center gap-3">
         <p className="text-xs text-gray-500 text-center leading-relaxed">
-          구글 드라이브 액세스 권한을 승인하지 않아<br />
-          디자인을 저장할 수 없습니다.<br />
-          <span className="text-gray-400">명단 관리는 지금 그대로 이용할 수 있습니다.</span>
+          디자인을 저장하려면 구글 드라이브<br />
+          액세스 권한이 필요합니다.<br />
+          <span className="text-gray-400">
+            명단 관리는 권한 없이도 그대로 이용할 수 있습니다.
+          </span>
         </p>
         <button
-          onClick={() => signIn('google')}
+          onClick={() => signIn('google', undefined, DRIVE_UPGRADE_AUTH_PARAMS)}
           className="text-xs px-3 py-1.5 rounded bg-[#475569] text-white hover:bg-[#334155] active:bg-[#1e293b] transition-colors"
         >
           드라이브 권한 허용하기
         </button>
         <p className="text-[11px] text-gray-400 text-center leading-relaxed">
-          업로드한 배경 이미지와 서식 정보만 저장되며,<br />
-          드라이브의 다른 파일에는 접근하지 않습니다.
+          이미지는 <span className="text-gray-500">본인 구글 드라이브</span>의<br />
+          &ldquo;명패 제작기&rdquo; 폴더에 저장됩니다.<br />
+          앱이 만든 파일에만 접근하며, 드라이브의<br />
+          다른 파일은 보거나 건드리지 않습니다.<br />
+          승인하지 않고 화면을 닫아도 로그인은 유지됩니다.
         </p>
       </div>
     )

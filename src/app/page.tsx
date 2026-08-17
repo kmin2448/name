@@ -525,7 +525,7 @@ export default function Home() {
         onApplyDesign={handleApplyDesign}
         pageCount={state.excelRows.length}
       />
-      <HelpPanel onOpenChange={setHelpOpen} />
+      <HelpPanel onOpenChange={setHelpOpen} showHint={showPanelHints} />
       <ThumbnailPanel
         state={state}
         selectedRowIndex={selectedRowIndex}

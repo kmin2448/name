@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt'
 import GoogleProvider from 'next-auth/providers/google'
 import type { NextRequest } from 'next/server'
 
-import { DRIVE_SCOPE, grantedDriveScope } from '@/lib/googleScopes'
+import { BASE_SCOPE, grantedDriveScope } from '@/lib/googleScopes'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
@@ -68,7 +68,11 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
       authorization: {
         params: {
-          scope: `openid email profile ${DRIVE_SCOPE}`,
+          // 로그인 단계에서는 드라이브 권한을 요구하지 않는다 (증분 인증).
+          // 디자인 저장을 쓰려 할 때 DRIVE_UPGRADE_AUTH_PARAMS로 따로 요청한다.
+          scope: BASE_SCOPE,
+          // 지난번에 승인해 둔 드라이브 권한이 있으면 새 토큰에도 그대로 이어받는다
+          include_granted_scopes: 'true',
           // 서버가 나중에 스스로 토큰을 갱신할 수 있도록 refresh token을 받는다
           access_type: 'offline',
           prompt: 'consent',
@@ -143,7 +147,7 @@ export async function getDriveAccessToken(req: NextRequest): Promise<string> {
   }
   if (!google.hasDriveScope) {
     throw new DriveAuthError(
-      '구글 드라이브 접근 권한을 승인하지 않아 디자인을 저장할 수 없습니다. 다시 로그인해 권한을 허용해 주세요.'
+      '구글 드라이브 접근 권한이 없습니다. 디자인 탭의 "드라이브 권한 허용하기"를 눌러 승인해 주세요.'
     )
   }
   return google.accessToken
