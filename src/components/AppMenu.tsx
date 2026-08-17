@@ -2,9 +2,9 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, LayoutTemplate, Wand2 } from 'lucide-react'
+import { BookOpen, ChevronDown, LayoutTemplate } from 'lucide-react'
 
-export type AppPage = 'nameplate' | 'vectorize'
+export type AppPage = 'nameplate' | 'guide'
 
 const PAGES = [
   {
@@ -15,11 +15,11 @@ const PAGES = [
     Icon: LayoutTemplate,
   },
   {
-    id: 'vectorize' as const,
-    href: '/vectorize',
-    title: '이미지 변환',
-    desc: 'JPG·PNG를 SVG 벡터 파일로',
-    Icon: Wand2,
+    id: 'guide' as const,
+    href: '/guide',
+    title: '사용 설명서',
+    desc: '명패 만드는 방법 단계별 안내',
+    Icon: BookOpen,
   },
 ]
 

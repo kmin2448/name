@@ -33,13 +33,13 @@ describe('AppMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it('제목을 누르면 이미지 변환 메뉴가 나타난다', async () => {
+  it('제목을 누르면 사용 설명서 메뉴가 나타난다', async () => {
     renderInClippingHeader()
     await userEvent.click(screen.getByRole('button', { name: /명패 제작기/ }))
 
-    const link = screen.getByRole('menuitem', { name: /이미지 변환/ })
+    const link = screen.getByRole('menuitem', { name: /사용 설명서/ })
     expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/vectorize')
+    expect(link).toHaveAttribute('href', '/guide')
   })
 
   it('메뉴는 헤더 바깥(body)에 그려진다 — 헤더 overflow에 잘리지 않도록', async () => {
@@ -59,7 +59,7 @@ describe('AppMenu', () => {
     // 포털 안을 바깥 클릭으로 오인해 닫아 버리면 링크 이동이 취소된다
     await userEvent.pointer({
       keys: '[MouseLeft>]',
-      target: screen.getByRole('menuitem', { name: /이미지 변환/ }),
+      target: screen.getByRole('menuitem', { name: /사용 설명서/ }),
     })
     expect(screen.getByRole('menu')).toBeInTheDocument()
   })
@@ -73,8 +73,8 @@ describe('AppMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it('이미지 변환 페이지에서는 그쪽 이름을 제목으로 쓴다', () => {
-    render(<AppMenu current="vectorize" />)
-    expect(screen.getByRole('button', { name: /이미지 변환/ })).toBeInTheDocument()
+  it('설명서 페이지에서는 그쪽 이름을 제목으로 쓴다', () => {
+    render(<AppMenu current="guide" />)
+    expect(screen.getByRole('button', { name: /사용 설명서/ })).toBeInTheDocument()
   })
 })
