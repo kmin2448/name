@@ -17,6 +17,7 @@ import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
+import { stepFontSize } from '@/lib/fontSize'
 import { APP_VERSION } from '@/lib/version'
 import { ZoomIn, ZoomOut, RotateCcw, Download, Printer, Upload } from 'lucide-react'
 
@@ -268,6 +269,16 @@ export default function Home() {
     })
   }
 
+  // 각 항목의 현재 크기를 기준으로 증감하므로 항목 간 크기 차이가 유지된다
+  const handleSelectionFontSizeStep = (delta: number) => {
+    selectedFieldIds.forEach((id) => {
+      const field = effectiveFields.find((f) => f.id === id)
+      if (!field) return
+      const fontSize = stepFontSize(field.fontSize, delta)
+      if (fontSize !== field.fontSize) handleUpdateField({ ...field, fontSize })
+    })
+  }
+
   // ── 방향키로 선택 요소 이동 (1mm, Shift: 5mm) ─────────────────────────
   // 정방향(하단) 명패 기준 방향. 상단 반전본은 같은 좌표를 180도 회전해
   // 그리므로 화면상 자동으로 반대 방향으로 움직인다.
@@ -290,6 +301,8 @@ export default function Home() {
 
   // ── Excel upload & template ──────────────────────────────────────────
   const excelInputRef = useRef<HTMLInputElement>(null)
+  // 드래그 영역 선택을 시작할 수 있는 범위 (A4 안팎을 모두 포함하는 캔버스 전체)
+  const canvasAreaRef = useRef<HTMLElement>(null)
 
   const downloadTemplate = () => {
     const headers = state.fields.map((f) => f.label)
@@ -506,7 +519,7 @@ export default function Home() {
           {/* 단축키 힌트 */}
           <span className="text-[10px] text-white/50 shrink-0 whitespace-nowrap">
             드래그: 이동 · 방향키: 1mm 이동 (<kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>: 5mm) · 핸들: 크기 조절 · 클릭→재클릭: 텍스트 편집 ·{' '}
-            빈 곳 드래그: 여러 개 선택 ·{' '}
+            빈 곳·여백 드래그(A4 밖도 가능): 여러 개 선택 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Ctrl</kbd>+클릭: 선택 추가 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Esc</kbd>: 종료 ·{' '}
             <kbd className="bg-white/15 px-0.5 rounded">Shift</kbd>+이미지: 자르기 ·{' '}
@@ -567,6 +580,7 @@ export default function Home() {
 
           {/* ── 중앙 편집 캔버스 (A4) ── */}
           <main
+            ref={canvasAreaRef}
             className="flex-1 overflow-hidden p-6 bg-gray-300 flex flex-col items-center relative"
             style={{
               cursor: isPanMode ? (isPanDragging ? 'grabbing' : 'grab') : undefined,
@@ -587,6 +601,7 @@ export default function Home() {
                 onReferenceChange={setAlignReference}
                 onAlign={handleAlign}
                 onColorChange={handleSelectionColorChange}
+                onFontSizeStep={handleSelectionFontSizeStep}
                 onClear={handleDeselect}
               />
             )}
@@ -604,6 +619,8 @@ export default function Home() {
                 focusedOverlayId={focusedOverlayId}
                 selectedIds={selectedIds}
                 onMarqueeSelect={handleMarqueeSelect}
+                marqueeAreaRef={canvasAreaRef}
+                marqueeDisabled={isPanMode}
                 onMove={handleMoveField}
                 onResize={handleResizeField}
                 onFieldFocus={handleSelect}

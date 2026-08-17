@@ -1,11 +1,11 @@
 'use client'
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { NameplateState, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DraggableTextField } from './DraggableTextField'
 import { DraggableOverlayImage } from './DraggableOverlayImage'
 import { MM_TO_PX } from '@/lib/sizeConstants'
 import { getBackgroundImageCss, getBackgroundSize } from '@/lib/backgroundPresets'
-import { MarqueeRect, MARQUEE_MIN_PCT, SelectionBox, boxesInRect, normalizeRect } from '@/lib/selection'
+import { MARQUEE_MIN_PX, SelectionBox, boxesInRect, normalizeRect } from '@/lib/selection'
 
 const SNAP_THRESHOLD = 2
 
@@ -182,6 +182,13 @@ type Props = {
   /** 다중 선택된 요소 id 목록 (텍스트·이미지 공통) */
   selectedIds: string[]
   onMarqueeSelect: (ids: string[], additive: boolean) => void
+  /**
+   * 드래그 영역 선택을 시작할 수 있는 범위. A4 바깥 여백에서 드래그를 시작해도
+   * 선택되도록 부모(캔버스 전체 영역)를 넘겨받는다. 없으면 명패 내부만 사용.
+   */
+  marqueeAreaRef?: React.RefObject<HTMLElement | null>
+  /** 화면 이동(Space 패닝) 중에는 영역 선택을 비활성화 */
+  marqueeDisabled?: boolean
   onMove: (id: string, positionX: number, positionY: number) => void
   onResize: (id: string, widthPct: number, heightPct: number) => void
   onFieldFocus: (id: string, additive: boolean) => void
@@ -196,14 +203,17 @@ type Props = {
 export function NameplateCanvas({
   state, overrideFields, scale,
   focusedFieldId, focusedOverlayId, selectedIds, onMarqueeSelect,
+  marqueeAreaRef, marqueeDisabled = false,
   onMove, onResize, onFieldFocus,
   onOverlayFocus, onOverlayMove, onOverlayResize, onOverlayCrop,
   onDeselect, onValueChange,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const [guides, setGuides] = useState<GuideLine[]>([])
-  const [marquee, setMarquee] = useState<MarqueeRect | null>(null)
+  // 선택 사각형은 A4 페이지 기준 px로 그린다 (A4 밖까지 이어져도 잘리지 않도록)
+  const [marqueeStyle, setMarqueeStyle] = useState<React.CSSProperties | null>(null)
 
   const { size, backgroundImage, overlayImages, previewData, layers } = state
   const fields = overrideFields ?? state.fields
@@ -263,39 +273,66 @@ export function NameplateCanvas({
     })
   }, [effectiveLayers, fields, overlayImages, previewData])
 
-  const handleMarqueeMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      const container = bottomRef.current
-      // 요소 위가 아니라 빈 배경에서 시작한 드래그만 영역 선택으로 처리
-      if (!container || e.target !== container || e.button !== 0) return
-      e.preventDefault()
+  const startMarquee = useCallback(
+    (e: MouseEvent) => {
+      const bottom = bottomRef.current
+      const page = pageRef.current
+      if (!bottom || !page || e.button !== 0) return
 
-      const rect = container.getBoundingClientRect()
-      const toPctX = (clientX: number) => ((clientX - rect.left) / rect.width) * 100
-      const toPctY = (clientY: number) => ((clientY - rect.top) / rect.height) * 100
-      const startX = toPctX(e.clientX)
-      const startY = toPctY(e.clientY)
+      // 요소(텍스트·이미지)나 도구 모음 위에서 시작한 드래그는 각자의 동작에 맡긴다
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-canvas-item], [data-marquee-ignore]')) return
+
+      e.preventDefault()
+      // 텍스트 편집 중이었다면 mousedown 기본 동작을 막았으므로 직접 해제해 준다
+      const active = document.activeElement
+      if (active instanceof HTMLElement) active.blur()
+
+      // 드래그 도중 캔버스는 움직이지 않으므로 시작 시점의 좌표계를 그대로 사용
+      const bottomRect = bottom.getBoundingClientRect()
+      const pageRect = page.getBoundingClientRect()
+      const startX = e.clientX
+      const startY = e.clientY
       const additive = e.ctrlKey || e.metaKey || e.shiftKey
 
-      let current: MarqueeRect = { x: startX, y: startY, width: 0, height: 0 }
+      let curX = startX
+      let curY = startY
       let dragged = false
 
+      // 화면 좌표 → 명패(하단 정방향) 기준 %. 명패 밖에서 시작하면 음수/100 초과가 되며,
+      // 교차 판정에는 문제가 없다.
+      const toPct = (clientX: number, clientY: number) => ({
+        x: ((clientX - bottomRect.left) / bottomRect.width) * 100,
+        y: ((clientY - bottomRect.top) / bottomRect.height) * 100,
+      })
+
       const handleMouseMove = (ev: MouseEvent) => {
-        current = normalizeRect(startX, startY, toPctX(ev.clientX), toPctY(ev.clientY))
-        if (current.width > MARQUEE_MIN_PCT || current.height > MARQUEE_MIN_PCT) dragged = true
-        setMarquee(current)
+        curX = ev.clientX
+        curY = ev.clientY
+        const width = Math.abs(curX - startX)
+        const height = Math.abs(curY - startY)
+        if (width > MARQUEE_MIN_PX || height > MARQUEE_MIN_PX) dragged = true
+        setMarqueeStyle({
+          left: Math.min(startX, curX) - pageRect.left,
+          top: Math.min(startY, curY) - pageRect.top,
+          width,
+          height,
+        })
       }
 
       const handleMouseUp = () => {
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
-        setMarquee(null)
+        setMarqueeStyle(null)
         if (!dragged) {
           // 단순 클릭 — 선택 해제
           if (!additive) onDeselect()
           return
         }
-        onMarqueeSelect(boxesInRect(collectSelectableBoxes(), current), additive)
+        const from = toPct(startX, startY)
+        const to = toPct(curX, curY)
+        const rect = normalizeRect(from.x, from.y, to.x, to.y)
+        onMarqueeSelect(boxesInRect(collectSelectableBoxes(), rect), additive)
       }
 
       document.addEventListener('mousemove', handleMouseMove)
@@ -303,6 +340,14 @@ export function NameplateCanvas({
     },
     [collectSelectableBoxes, onMarqueeSelect, onDeselect]
   )
+
+  // 영역 선택은 캔버스 전체(A4 안팎 모두)에서 시작할 수 있다.
+  useEffect(() => {
+    const area = marqueeAreaRef?.current ?? bottomRef.current
+    if (!area || marqueeDisabled) return
+    area.addEventListener('mousedown', startMarquee)
+    return () => area.removeEventListener('mousedown', startMarquee)
+  }, [marqueeAreaRef, marqueeDisabled, startMarquee])
 
   const bgStyle: React.CSSProperties = {
     backgroundImage: getBackgroundImageCss(backgroundImage),
@@ -323,7 +368,7 @@ export function NameplateCanvas({
   return (
     <div>
       {/* A4 page wrapper — 명패 외 영역은 50% 투명으로 표시 */}
-      <div style={{
+      <div ref={pageRef} style={{
         width: a4WPx,
         height: a4HPx,
         background: 'rgba(255,255,255,0.5)',
@@ -365,11 +410,7 @@ export function NameplateCanvas({
               </div>
 
               {/* ── Bottom half (interactive) ── */}
-              <div
-                ref={bottomRef}
-                style={halfStyle}
-                onMouseDown={handleMarqueeMouseDown}
-              >
+              <div ref={bottomRef} style={halfStyle}>
                 {effectiveLayers.map((id) => {
                   const field = fields.find((f) => f.id === id)
                   if (field) {
@@ -408,23 +449,6 @@ export function NameplateCanvas({
                   }
                   return null
                 })}
-
-                {/* 드래그 영역 선택 사각형 */}
-                {marquee && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${marquee.x}%`,
-                      top: `${marquee.y}%`,
-                      width: `${marquee.width}%`,
-                      height: `${marquee.height}%`,
-                      border: '1px dashed #2563eb',
-                      background: 'rgba(37, 99, 235, 0.12)',
-                      pointerEvents: 'none',
-                      zIndex: 20,
-                    }}
-                  />
-                )}
               </div>
             </div>
 
@@ -450,6 +474,20 @@ export function NameplateCanvas({
             )}
           </div>
         </div>
+
+        {/* 드래그 영역 선택 사각형 — A4 기준 절대 위치라 A4 밖까지 그려진다 */}
+        {marqueeStyle && (
+          <div
+            style={{
+              position: 'absolute',
+              border: '1px dashed #2563eb',
+              background: 'rgba(37, 99, 235, 0.12)',
+              pointerEvents: 'none',
+              zIndex: 40,
+              ...marqueeStyle,
+            }}
+          />
+        )}
       </div>
     </div>
   )

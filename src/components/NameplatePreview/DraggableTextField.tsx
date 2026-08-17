@@ -182,6 +182,7 @@ export function DraggableTextField({
 
   return (
     <div
+      data-canvas-item
       onMouseDown={handleDragMouseDown}
       style={{
         position: 'absolute',

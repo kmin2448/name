@@ -23,8 +23,8 @@ export type AlignMode = 'left' | 'center' | 'right'
 /** 정렬 기준 영역 — 선택 항목들의 외곽(selection) 또는 명패 전체(canvas) */
 export type AlignReference = 'selection' | 'canvas'
 
-/** 클릭과 영역 선택을 구분하는 최소 드래그 크기(%) */
-export const MARQUEE_MIN_PCT = 0.5
+/** 클릭과 영역 선택을 구분하는 최소 드래그 거리(화면 px) */
+export const MARQUEE_MIN_PX = 3
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
