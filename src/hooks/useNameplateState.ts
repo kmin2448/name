@@ -401,6 +401,11 @@ export function useNameplateState() {
       dispatch({ type: 'UPDATE_EXCEL_ROW', payload: { index, data } }),
     []
   )
+  /** 저장해 둔 명단을 불러와 편집 상태에 반영한다 */
+  const restoreState = useCallback(
+    (next: NameplateState) => dispatch({ type: 'RESTORE_STATE', payload: next }),
+    []
+  )
   const addExcelRow = useCallback(
     (row: Record<string, string>) => dispatch({ type: 'ADD_EXCEL_ROW', payload: row }),
     []
@@ -459,7 +464,7 @@ export function useNameplateState() {
     state, setSize, setBackground, addOverlayImage, updateOverlayImage, removeOverlayImage,
     setFields, addField, addFieldWithLabel,
     updateField, removeField, moveField, resizeField,
-    setPreviewData, setExcelRows, updateExcelRow, addExcelRow, removeExcelRow,
+    setPreviewData, setExcelRows, updateExcelRow, addExcelRow, removeExcelRow, restoreState,
     setFieldOverrideForPage, moveFieldForPage, resizeFieldForPage, clearPageFieldOverride,
     moveLayer, setLayers, setShowBorder, resetFields, saveAsDefault, applyFieldsToAll,
   }

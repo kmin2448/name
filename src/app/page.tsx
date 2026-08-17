@@ -18,6 +18,8 @@ import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
 import { DEFAULT_CANVAS_VIEW, MIN_ZOOM, MAX_ZOOM, loadCanvasView, saveCanvasView } from '@/lib/canvasView'
 import { createPageRow, nextSelectedIndex } from '@/lib/pageRows'
+import { RosterPayload, extractRosterPayload, mergeRestoredState } from '@/lib/rosters'
+import { RosterPanel } from '@/components/RosterPanel'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
 import { stepFontSize } from '@/lib/fontSize'
@@ -62,6 +64,7 @@ export default function Home() {
     updateExcelRow,
     addExcelRow,
     removeExcelRow,
+    restoreState,
     setFieldOverrideForPage,
     moveFieldForPage,
     resizeFieldForPage,
@@ -77,6 +80,7 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [alignReference, setAlignReference] = useState<AlignReference>('selection')
   const [thumbnailOpen, setThumbnailOpen] = useState(false)
+  const [rosterOpen, setRosterOpen] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_CANVAS_VIEW.zoom)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
@@ -185,6 +189,15 @@ export default function Home() {
     )
 
     toast.success(`${index + 1}번 페이지를 삭제했습니다.`)
+  }
+
+  /** 저장해 둔 명단을 불러와 썸네일·캔버스에 반영한다 */
+  const handleLoadRoster = (payload: RosterPayload) => {
+    restoreState(mergeRestoredState(state, payload))
+    setSelectedRowIndex(payload.excelRows.length > 0 ? 0 : -1)
+    setSelectedIds([])
+    setApplyToAll(false)
+    setThumbnailOpen(true)
   }
 
   const handleRowFieldChange = (fieldLabel: string, value: string) => {
@@ -492,6 +505,13 @@ export default function Home() {
     <>
       <Toaster position="top-right" richColors />
       <VisitCounter />
+      <RosterPanel
+        open={rosterOpen}
+        onOpenChange={setRosterOpen}
+        getPayload={() => extractRosterPayload(state)}
+        onLoad={handleLoadRoster}
+        pageCount={state.excelRows.length}
+      />
       <HelpPanel />
       <ThumbnailPanel
         state={state}
