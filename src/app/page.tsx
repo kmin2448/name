@@ -20,6 +20,8 @@ import { DEFAULT_CANVAS_VIEW, MIN_ZOOM, MAX_ZOOM, loadCanvasView, saveCanvasView
 import { createPageRow, nextSelectedIndex } from '@/lib/pageRows'
 import { RosterPayload, extractRosterPayload, mergeRestoredState } from '@/lib/rosters'
 import { RosterPanel } from '@/components/RosterPanel'
+import { ApplyMode, DesignImages, DesignPayload, applyDesign } from '@/lib/designs'
+import { DesignPanel } from '@/components/DesignPanel'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
 import { stepFontSize } from '@/lib/fontSize'
@@ -82,8 +84,9 @@ export default function Home() {
   const [thumbnailOpen, setThumbnailOpen] = useState(false)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [designOpen, setDesignOpen] = useState(false)
   // 오른쪽 패널이 하나라도 열려 있으면 버튼 옆 안내 문구가 패널을 가리므로 숨긴다
-  const showPanelHints = !thumbnailOpen && !rosterOpen && !helpOpen
+  const showPanelHints = !thumbnailOpen && !rosterOpen && !helpOpen && !designOpen
   const [zoom, setZoom] = useState(DEFAULT_CANVAS_VIEW.zoom)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
@@ -201,6 +204,12 @@ export default function Home() {
     setSelectedIds([])
     setApplyToAll(false)
     setThumbnailOpen(true)
+  }
+
+  /** 저장해 둔 명패 디자인을 현재 편집 화면에 적용한다 */
+  const handleApplyDesign = (payload: DesignPayload, images: DesignImages, mode: ApplyMode) => {
+    restoreState(applyDesign(state, payload, images, mode))
+    setSelectedIds([])
   }
 
   const handleRowFieldChange = (fieldLabel: string, value: string) => {
@@ -514,6 +523,13 @@ export default function Home() {
         getPayload={() => extractRosterPayload(state)}
         onLoad={handleLoadRoster}
         pageCount={state.excelRows.length}
+        showHint={showPanelHints}
+      />
+      <DesignPanel
+        open={designOpen}
+        onOpenChange={setDesignOpen}
+        state={state}
+        onApply={handleApplyDesign}
         showHint={showPanelHints}
       />
       <HelpPanel onOpenChange={setHelpOpen} />
