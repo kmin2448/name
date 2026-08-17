@@ -158,20 +158,15 @@ export function LibraryPanel({
 
               <div className="text-[11px] text-gray-500 leading-relaxed text-left border-t border-gray-100 pt-3 mt-1 space-y-1.5">
                 <p>
-                  배경 서식 저장을 위해 구글 드라이브 액세스 권한 승인이 필요합니다. 사용자가
-                  업로드하는 배경 이미지와 서식 정보 외에 다른 정보는 저장되지 않습니다.
+                  로그인에는{' '}
+                  <span className="font-medium text-gray-600">이름·이메일 정보만</span> 사용합니다.
+                  구글 드라이브 등 다른 권한은 요청하지 않습니다.
                 </p>
                 <p className="text-gray-400">
-                  권한 요청 화면에서 드라이브 항목의{' '}
-                  <span className="font-medium text-gray-500">체크를 해제하고 &quot;계속&quot;</span>을
-                  누르면, 권한 없이 로그인되어{' '}
-                  <span className="font-medium text-gray-500">명단 관리는 그대로 이용</span>할 수
-                  있습니다. 이때는 디자인 탭의 배경·오버레이 저장만 제한되고, 다른 제약은 없습니다.
-                </p>
-                <p className="text-gray-400">
-                  단, <span className="font-medium text-gray-500">&quot;취소&quot;를 누르면 로그인
-                  자체가 취소</span>되어 명단 관리도 쓸 수 없습니다. 권한만 빼고 싶다면 취소가 아니라
-                  체크 해제 후 계속을 눌러 주세요. 나중에 다시 로그인해 권한을 허용할 수도 있습니다.
+                  배경·오버레이 이미지를 저장하는{' '}
+                  <span className="font-medium text-gray-500">디자인 기능을 처음 쓸 때</span>만
+                  드라이브 액세스 권한을 따로 여쭤봅니다. 그때 승인하지 않아도 로그인은 유지되고,
+                  명단 관리는 그대로 이용할 수 있습니다.
                 </p>
               </div>
             </div>

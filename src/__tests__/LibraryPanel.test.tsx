@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { LibraryPanel } from '@/components/LibraryPanel'
 import { initialState } from '@/hooks/useNameplateState'
 import { extractRosterPayload } from '@/lib/rosters'
+import { DRIVE_UPGRADE_AUTH_PARAMS } from '@/lib/googleScopes'
 
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
@@ -11,9 +12,10 @@ jest.mock('next-auth/react', () => ({
   signOut: jest.fn(),
 }))
 
-import { useSession } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 
 const mockUseSession = useSession as unknown as jest.Mock
+const mockSignIn = signIn as unknown as jest.Mock
 
 type SessionShape = { user?: { email?: string }; hasDriveScope?: boolean } | null
 
@@ -70,14 +72,15 @@ describe('LibraryPanel', () => {
     await waitFor(() => expect(container).toBeEmptyDOMElement())
   })
 
-  it('로그인 전에는 로그인 버튼과 드라이브 권한 안내를 보여준다', async () => {
+  it('로그인 전에는 로그인 버튼과 함께 기본 범위만 쓴다고 안내한다', async () => {
     setSession(null)
     renderPanel()
 
     expect(await screen.findByRole('button', { name: /구글로 로그인/ })).toBeInTheDocument()
-    expect(
-      screen.getByText(/배경 서식 저장을 위해 구글 드라이브 액세스 권한 승인이 필요합니다/)
-    ).toBeInTheDocument()
+    // 로그인 단계에서는 드라이브 권한을 요청하지 않는다 (증분 인증)
+    expect(screen.getByText(/이름·이메일 정보만/)).toBeInTheDocument()
+    expect(screen.getByText(/구글 드라이브 등 다른 권한은 요청하지 않습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/디자인 기능을 처음 쓸 때/)).toBeInTheDocument()
     expect(screen.getByText(/명단 관리는 그대로 이용/)).toBeInTheDocument()
     // 로그인 전에는 탭이 없다
     expect(screen.queryByRole('button', { name: '디자인' })).not.toBeInTheDocument()
@@ -122,5 +125,15 @@ describe('LibraryPanel', () => {
 
     expect(await screen.findByRole('button', { name: '드라이브 권한 허용하기' })).toBeInTheDocument()
     expect(screen.queryByText(/현재 디자인 저장/)).not.toBeInTheDocument()
+  })
+
+  it('드라이브 권한 허용 버튼은 드라이브 범위를 더해 다시 인증한다', async () => {
+    setSession({ user: { email: 'me@example.com' }, hasDriveScope: false })
+    renderPanel()
+
+    await userEvent.click(await screen.findByRole('button', { name: '디자인' }))
+    await userEvent.click(await screen.findByRole('button', { name: '드라이브 권한 허용하기' }))
+
+    expect(mockSignIn).toHaveBeenCalledWith('google', undefined, DRIVE_UPGRADE_AUTH_PARAMS)
   })
 })
