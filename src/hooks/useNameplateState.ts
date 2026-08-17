@@ -1,5 +1,5 @@
 'use client'
-import { useReducer, useCallback, useEffect, useRef } from 'react'
+import { useReducer, useCallback, useEffect, useState } from 'react'
 import { NameplateState, NameplateSize, TextFieldConfig, OverlayImage } from '@/types/nameplate'
 import { DEFAULT_SIZE, DEFAULT_FIELDS, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
 import { removePageOverrides } from '@/lib/pageRows'
@@ -91,6 +91,7 @@ type Action =
   | { type: 'SET_SHOW_BORDER'; payload: boolean }
   | { type: 'RESET_FIELDS'; payload: TextFieldConfig[] }
   | { type: 'APPLY_FIELDS_TO_ALL'; payload: TextFieldConfig[] }
+  | { type: 'RESTORE_STATE'; payload: NameplateState }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -308,6 +309,9 @@ export function nameplateReducer(state: NameplateState, action: Action): Namepla
       }
     }
 
+    case 'RESTORE_STATE':
+      return action.payload
+
     case 'RESET_FIELDS': {
       const targetFields = action.payload
       const overlayIds = state.overlayImages.map((o) => o.id)
@@ -337,31 +341,38 @@ export const initialState: NameplateState = {
   showBorder: true,
 }
 
+/** localStorage에 저장된 상태(없으면 사용자 기본 서식)를 읽어 온다 */
+function loadRestorableState(): NameplateState | null {
+  const persisted = loadPersistedState()
+  if (persisted) return persisted
+
+  const customDefaults = loadCustomDefaultFields()
+  if (!customDefaults) return null
+  return {
+    ...initialState,
+    fields: customDefaults,
+    layers: customDefaults.map((f) => f.id),
+  }
+}
+
 export function useNameplateState() {
-  const [state, dispatch] = useReducer(nameplateReducer, undefined, (): NameplateState => {
-    // 저장된 전체 상태(명단·편집 내용 포함)가 있으면 우선 복원
-    const persisted = loadPersistedState()
-    if (persisted) return persisted
+  // 서버 렌더와 클라이언트 첫 렌더가 같아야 하므로(hydration) 항상 기본 상태로 시작하고,
+  // localStorage 복원은 마운트 이후에 한다.
+  const [state, dispatch] = useReducer(nameplateReducer, initialState)
+  const [hydrated, setHydrated] = useState(false)
 
-    const customDefaults = loadCustomDefaultFields()
-    if (!customDefaults) return initialState
-    return {
-      ...initialState,
-      fields: customDefaults,
-      layers: customDefaults.map((f) => f.id),
-    }
-  })
-
-  // 상태가 바뀔 때마다 localStorage에 저장해 새로고침 후에도 유지
-  // (최초 마운트 시점의 중복 저장은 건너뜀)
-  const isFirstRender = useRef(true)
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
-    }
+    const restorable = loadRestorableState()
+    if (restorable) dispatch({ type: 'RESTORE_STATE', payload: restorable })
+    setHydrated(true)
+  }, [])
+
+  // 상태가 바뀔 때마다 localStorage에 저장해 새로고침 후에도 유지.
+  // 복원 전에는 저장하지 않는다 — 기본 상태로 저장된 내용을 덮어쓰게 된다.
+  useEffect(() => {
+    if (!hydrated) return
     savePersistedState(state)
-  }, [state])
+  }, [state, hydrated])
 
   const setSize = useCallback((size: NameplateSize) => dispatch({ type: 'SET_SIZE', payload: size }), [])
   const setBackground = useCallback((bg: string | null) => dispatch({ type: 'SET_BACKGROUND', payload: bg }), [])

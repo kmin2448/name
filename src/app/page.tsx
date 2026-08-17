@@ -16,6 +16,7 @@ import { VisitCounter } from '@/components/VisitCounter'
 import { parseExcelFile } from '@/lib/excelParser'
 import { ExcelParseResult, TextFieldConfig } from '@/types/nameplate'
 import { MM_TO_PX, SAMPLE_PREVIEW_DATA } from '@/lib/sizeConstants'
+import { DEFAULT_CANVAS_VIEW, MIN_ZOOM, MAX_ZOOM, loadCanvasView, saveCanvasView } from '@/lib/canvasView'
 import { createPageRow, nextSelectedIndex } from '@/lib/pageRows'
 import { arrowKeyDelta } from '@/lib/keyboardMove'
 import { AlignMode, AlignReference, SelectionBox, alignBoxes, clampGroupDelta } from '@/lib/selection'
@@ -25,8 +26,6 @@ import { ZoomIn, ZoomOut, RotateCcw, Download, Printer, Upload } from 'lucide-re
 
 // A4 기준 캔버스 최대 폭(px) — 이 값에서 zoom=1이 됨
 const A4_MAX_PX = 580
-const MIN_ZOOM = 0.25
-const MAX_ZOOM = 3
 
 function getEffectiveFields(
   globalFields: TextFieldConfig[],
@@ -78,7 +77,7 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [alignReference, setAlignReference] = useState<AlignReference>('selection')
   const [thumbnailOpen, setThumbnailOpen] = useState(false)
-  const [zoom, setZoom] = useState(1.5)
+  const [zoom, setZoom] = useState(DEFAULT_CANVAS_VIEW.zoom)
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1)
   const [applyToAll, setApplyToAll] = useState(true)
 
@@ -406,18 +405,27 @@ export default function Home() {
   // ── Pan (Space + drag) — transform 기반으로 캔버스 자체를 이동 ────────
   const [isPanMode, setIsPanMode] = useState(false)
   const [isPanDragging, setIsPanDragging] = useState(false)
-  const [canvasOffset, setCanvasOffset] = useState<{ x: number; y: number }>(() => {
-    try {
-      const stored = localStorage.getItem('nameplate_canvas_offset')
-      return stored ? (JSON.parse(stored) as { x: number; y: number }) : { x: 0, y: 0 }
-    } catch {
-      return { x: 0, y: 0 }
-    }
+  const [canvasOffset, setCanvasOffset] = useState({
+    x: DEFAULT_CANVAS_VIEW.offsetX,
+    y: DEFAULT_CANVAS_VIEW.offsetY,
   })
 
+  // 서버 렌더와 첫 렌더가 같아야 하므로 저장된 배율·위치는 마운트 이후에 복원한다
+  const [viewRestored, setViewRestored] = useState(false)
   useEffect(() => {
-    try { localStorage.setItem('nameplate_canvas_offset', JSON.stringify(canvasOffset)) } catch { /* ignore */ }
-  }, [canvasOffset])
+    const saved = loadCanvasView()
+    if (saved) {
+      setZoom(saved.zoom)
+      setCanvasOffset({ x: saved.offsetX, y: saved.offsetY })
+    }
+    setViewRestored(true)
+  }, [])
+
+  // 사용자가 바꾼 배율·위치를 저장 (복원 전에는 기본값으로 덮어쓰지 않는다)
+  useEffect(() => {
+    if (!viewRestored) return
+    saveCanvasView({ zoom, offsetX: canvasOffset.x, offsetY: canvasOffset.y })
+  }, [viewRestored, zoom, canvasOffset])
   const panStart = useRef<{ mouseX: number; mouseY: number; canvasX: number; canvasY: number } | null>(null)
 
   useEffect(() => {
@@ -472,7 +480,11 @@ export default function Home() {
   // ── Zoom ──────────────────────────────────────────────────────────────
   const handleZoomIn = () => setZoom((v) => Math.min(MAX_ZOOM, parseFloat((v + 0.1).toFixed(1))))
   const handleZoomOut = () => setZoom((v) => Math.max(MIN_ZOOM, parseFloat((v - 0.1).toFixed(1))))
-  const handleZoomReset = () => setZoom(1)
+  /** 접속 직후와 같은 기본 화면(150% · 좌상단)으로 되돌린다 */
+  const handleZoomReset = () => {
+    setZoom(DEFAULT_CANVAS_VIEW.zoom)
+    setCanvasOffset({ x: DEFAULT_CANVAS_VIEW.offsetX, y: DEFAULT_CANVAS_VIEW.offsetY })
+  }
 
   const hasExcelData = state.excelRows.length > 0
 
@@ -559,7 +571,7 @@ export default function Home() {
           <button onClick={handleZoomIn} className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0" title="확대">
             <ZoomIn className="w-3 h-3" />
           </button>
-          <button onClick={handleZoomReset} className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0" title="배율 초기화">
+          <button onClick={handleZoomReset} className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors shrink-0" title="기본 화면(150%·좌상단)으로">
             <RotateCcw className="w-3 h-3" />
           </button>
 
@@ -630,7 +642,7 @@ export default function Home() {
           {/* ── 중앙 편집 캔버스 (A4) ── */}
           <main
             ref={canvasAreaRef}
-            className="flex-1 overflow-hidden p-6 bg-gray-300 flex flex-col items-center relative"
+            className="flex-1 overflow-hidden p-6 bg-gray-300 flex flex-col items-start relative"
             style={{
               cursor: isPanMode ? (isPanDragging ? 'grabbing' : 'grab') : undefined,
               userSelect: isPanMode ? 'none' : undefined,
