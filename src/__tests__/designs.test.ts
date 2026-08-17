@@ -14,6 +14,7 @@ import {
 } from '@/lib/designs'
 import { base64ByteLength, parseDataUrl } from '@/lib/googleDrive'
 import {
+  BASE_AUTH_PARAMS,
   BASE_SCOPE,
   DRIVE_SCOPE,
   DRIVE_UPGRADE_AUTH_PARAMS,
@@ -323,5 +324,14 @@ describe('증분 인증 범위', () => {
       access_type: 'offline',
       prompt: 'consent',
     })
+  })
+
+  it('로그인은 기본 범위만 요청하고 드라이브 권한을 끼워 넣지 않는다', () => {
+    expect(BASE_AUTH_PARAMS.scope).toBe(BASE_SCOPE)
+    expect(BASE_AUTH_PARAMS.scope).not.toContain(DRIVE_SCOPE)
+  })
+
+  it('로그인에는 prompt=consent를 쓰지 않는다 (매번 동의 화면이 다시 뜨는 것을 막는다)', () => {
+    expect(BASE_AUTH_PARAMS).not.toHaveProperty('prompt')
   })
 })

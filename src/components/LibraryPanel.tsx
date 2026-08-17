@@ -143,40 +143,65 @@ export function LibraryPanel({
             <p className="text-xs text-gray-400 text-center py-12">확인 중...</p>
           ) : !email ? (
             <div className="py-8 flex flex-col items-center gap-3">
-              <p className="text-xs text-gray-500 text-center leading-relaxed">
+              <p className="text-sm text-gray-500 text-center leading-relaxed">
                 구글로 로그인하면 만든 명단을 최대 {MAX_ROSTERS}건,<br />
                 배경·오버레이 디자인을 최대 {MAX_DESIGNS}건까지<br />
                 저장하고 언제든 다시 불러올 수 있습니다.
               </p>
               <button
                 onClick={() => signIn('google')}
-                className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm transition-colors"
+                className="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm transition-colors"
               >
                 <GoogleMark />
                 구글로 로그인
               </button>
 
-              <div className="text-[11px] text-gray-500 leading-relaxed text-left border-t border-gray-100 pt-3 mt-1 space-y-1.5">
-                <p>
-                  로그인에는{' '}
-                  <span className="font-medium text-gray-600">이름·이메일 정보만</span> 사용합니다.
-                  구글 드라이브 등 다른 권한은 요청하지 않습니다.
-                </p>
-                <p className="text-gray-400">
-                  배경·오버레이 이미지를 저장하는{' '}
-                  <span className="font-medium text-gray-500">디자인 기능을 처음 쓸 때</span>만
-                  드라이브 액세스 권한을 따로 여쭤봅니다. 그때 승인하지 않아도 로그인은 유지되고,
-                  명단 관리는 그대로 이용할 수 있습니다.
-                </p>
-                <p className="text-gray-400">
-                  저장한 배경·오버레이 이미지는{' '}
-                  <span className="font-medium text-gray-500">
-                    본인 구글 드라이브의 &ldquo;명패 제작기&rdquo; 폴더
+              {/* 한 문장씩 끊어 읽도록 글머리 기호로 나눈다 */}
+              <ul className="text-[13px] text-gray-500 leading-relaxed text-left border-t border-gray-100 pt-3 mt-1 space-y-1.5">
+                <li className="flex gap-1.5">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>
+                    로그인에는{' '}
+                    <span className="font-medium text-gray-600">이름·이메일 정보만</span>{' '}
+                    사용합니다.
                   </span>
-                  에 보관됩니다. 이 사이트의 서버에는 이미지를 따로 보관하지 않으며, 드라이브에서
-                  직접 확인하거나 지울 수 있습니다.
-                </p>
-              </div>
+                </li>
+                <li className="flex gap-1.5">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>구글 드라이브 등 다른 권한은 요청하지 않습니다.</span>
+                </li>
+                <li className="flex gap-1.5 text-gray-400">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>
+                    배경·오버레이 이미지를 저장하는{' '}
+                    <span className="font-medium text-gray-500">디자인 기능을 처음 쓸 때</span>만
+                    드라이브 액세스 권한을 따로 여쭤봅니다.
+                  </span>
+                </li>
+                <li className="flex gap-1.5 text-gray-400">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>
+                    그때 승인하지 않아도 로그인은 유지되고, 명단 관리는 그대로 이용할 수 있습니다.
+                  </span>
+                </li>
+                <li className="flex gap-1.5 text-gray-400">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>
+                    저장한 배경·오버레이 이미지는{' '}
+                    <span className="font-medium text-gray-500">
+                      본인 구글 드라이브의 &ldquo;명패 제작기&rdquo; 폴더
+                    </span>
+                    에 보관됩니다.
+                  </span>
+                </li>
+                <li className="flex gap-1.5 text-gray-400">
+                  <span className="text-[#475569] shrink-0">•</span>
+                  <span>
+                    이 사이트의 서버에는 이미지를 따로 보관하지 않으며, 드라이브에서 직접
+                    확인하거나 지울 수 있습니다.
+                  </span>
+                </li>
+              </ul>
             </div>
           ) : (
             <>

@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt'
 import GoogleProvider from 'next-auth/providers/google'
 import type { NextRequest } from 'next/server'
 
-import { BASE_SCOPE, grantedDriveScope } from '@/lib/googleScopes'
+import { BASE_AUTH_PARAMS, grantedDriveScope } from '@/lib/googleScopes'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
@@ -66,18 +66,9 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      authorization: {
-        params: {
-          // 로그인 단계에서는 드라이브 권한을 요구하지 않는다 (증분 인증).
-          // 디자인 저장을 쓰려 할 때 DRIVE_UPGRADE_AUTH_PARAMS로 따로 요청한다.
-          scope: BASE_SCOPE,
-          // 지난번에 승인해 둔 드라이브 권한이 있으면 새 토큰에도 그대로 이어받는다
-          include_granted_scopes: 'true',
-          // 서버가 나중에 스스로 토큰을 갱신할 수 있도록 refresh token을 받는다
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
+      // 로그인 단계에서는 드라이브 권한을 요구하지 않는다 (증분 인증).
+      // 디자인 저장을 쓰려 할 때 DRIVE_UPGRADE_AUTH_PARAMS로 따로 요청한다.
+      authorization: { params: BASE_AUTH_PARAMS },
     }),
   ],
   // 별도 DB 없이 쿠키에 담긴 JWT만으로 세션을 유지한다
@@ -86,11 +77,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, account, profile }) {
       if (profile?.email) token.email = profile.email
 
-      // 최초 로그인 — 발급받은 토큰을 JWT에 담는다
+      // 로그인 직후(드라이브 권한 추가 승인 포함) — 발급받은 토큰을 JWT에 담는다
       if (account) {
+        const previous = token.google as GoogleTokens | undefined
         token.google = {
           accessToken: account.access_token,
-          refreshToken: account.refresh_token,
+          // 구글은 동의 화면을 거치지 않은 재인증에는 refresh token을 주지 않는다.
+          // 그럴 때 기존 값을 버리면 갱신이 불가능해지므로 이전 것을 이어 쓴다.
+          refreshToken: account.refresh_token ?? previous?.refreshToken,
           expiresAt: account.expires_at ? account.expires_at * 1000 : undefined,
           hasDriveScope: grantedDriveScope(account.scope),
         } satisfies GoogleTokens

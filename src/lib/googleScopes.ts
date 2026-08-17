@@ -24,9 +24,23 @@ export function grantedDriveScope(scope: string | undefined | null): boolean {
 }
 
 /**
+ * 로그인할 때 구글에 보내는 인증 파라미터.
+ *
+ * prompt를 일부러 넣지 않는다. 'consent'를 주면 새로 승인할 범위가 없어도
+ * 로그인할 때마다 동의 화면이 다시 떠서, 권한을 요청하지 않는다는 안내와 어긋난다.
+ * 비워두면 구글이 알아서 판단해 이미 승인한 사용자는 화면 없이 바로 로그인된다.
+ */
+export const BASE_AUTH_PARAMS = {
+  scope: BASE_SCOPE,
+  include_granted_scopes: 'true',
+  access_type: 'offline',
+} as const
+
+/**
  * 디자인 저장을 쓰려 할 때 signIn()에 넘기는 인증 파라미터 (증분 인증).
  * - include_granted_scopes: 이미 승인해 둔 범위를 새 토큰에도 그대로 담는다
  * - access_type=offline + prompt=consent: 서버가 스스로 갱신할 refresh token을 받는다
+ *   (여기서는 사용자가 권한 버튼을 직접 누른 흐름이라 동의 화면이 뜨는 게 자연스럽다)
  */
 export const DRIVE_UPGRADE_AUTH_PARAMS = {
   scope: DRIVE_UPGRADE_SCOPE,
