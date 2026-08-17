@@ -13,9 +13,10 @@ import {
   maxDimension,
   scaledSize,
   svgFileName,
-  traceOptions,
   validateFile,
+  vtracerConfig,
 } from '@/lib/vectorize'
+import { traceToSvg } from '@/lib/vtracerClient'
 
 /** 변환이 끝난 결과 한 건 */
 type Result = {
@@ -101,9 +102,7 @@ export default function VectorizePage() {
     setResults([])
     setProgress({ done: 0, total: files.length, label: '준비 중...' })
 
-    // 1200줄짜리 라이브러리라 이 화면에 들어올 때까지 내려받지 않는다
-    const { default: ImageTracer } = await import('imagetracerjs')
-    const options = traceOptions(level)
+    const config = vtracerConfig(level)
     const converted: Result[] = []
 
     try {
@@ -119,7 +118,12 @@ export default function VectorizePage() {
           // 트레이싱은 화면을 멈추므로, 진행 문구가 먼저 그려지도록 한 프레임 양보한다
           await nextFrame()
 
-          const svg = ImageTracer.imagedataToSVG(imageData, options)
+          const svg = await traceToSvg(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+            config
+          )
           converted.push({
             name: svgFileName(file.name),
             svg,

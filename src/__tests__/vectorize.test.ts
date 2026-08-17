@@ -1,4 +1,5 @@
 import {
+  MAX_COLOR_PRECISION,
   MAX_FILE_BYTES,
   TRACE_LEVELS,
   formatBytes,
@@ -6,8 +7,8 @@ import {
   maxDimension,
   scaledSize,
   svgFileName,
-  traceOptions,
   validateFile,
+  vtracerConfig,
 } from '@/lib/vectorize'
 
 describe('isSupportedImageType', () => {
@@ -55,37 +56,66 @@ describe('maxDimension', () => {
   })
 })
 
-describe('traceOptions', () => {
-  it('정밀할수록 색을 더 많이 남긴다', () => {
-    const low = traceOptions('low').numberofcolors as number
-    const medium = traceOptions('medium').numberofcolors as number
-    const high = traceOptions('high').numberofcolors as number
-    expect(low).toBeLessThan(medium)
-    expect(medium).toBeLessThan(high)
-  })
-
-  it('정밀할수록 자잘한 경로를 덜 버린다', () => {
-    const low = traceOptions('low').pathomit as number
-    const medium = traceOptions('medium').pathomit as number
-    const high = traceOptions('high').pathomit as number
-    expect(low).toBeGreaterThan(medium)
-    expect(medium).toBeGreaterThan(high)
-  })
-
-  it('정밀할수록 근사 허용 오차가 작다', () => {
-    const low = traceOptions('low').ltres as number
-    const high = traceOptions('high').ltres as number
-    expect(high).toBeLessThan(low)
-  })
-
-  it('세 단계 모두 면으로만 그린다 (외곽선 없음)', () => {
+describe('vtracerConfig', () => {
+  it('세 단계 모두 곡선(spline)으로 그린다 — 다각형이면 확대할 때 각져 보인다', () => {
     for (const { value } of TRACE_LEVELS) {
-      expect(traceOptions(value).strokewidth).toBe(0)
+      expect(vtracerConfig(value).mode).toBe('spline')
     }
   })
 
-  it("'낮음'은 흐림을 쓰지 않는다 (경계에 중간색이 생겨 오히려 복잡해진다)", () => {
-    expect(traceOptions('low').blurradius).toBe(0)
+  it('정밀할수록 잔 얼룩을 덜 버린다', () => {
+    expect(vtracerConfig('low').filterSpeckle).toBeGreaterThan(
+      vtracerConfig('medium').filterSpeckle
+    )
+    expect(vtracerConfig('medium').filterSpeckle).toBeGreaterThan(
+      vtracerConfig('high').filterSpeckle
+    )
+  })
+
+  it('정밀할수록 모서리를 민감하게 잡는다', () => {
+    expect(vtracerConfig('low').cornerThreshold).toBeGreaterThan(
+      vtracerConfig('medium').cornerThreshold
+    )
+    expect(vtracerConfig('medium').cornerThreshold).toBeGreaterThan(
+      vtracerConfig('high').cornerThreshold
+    )
+  })
+
+  it('정밀할수록 좌표를 더 촘촘히 남기고 그라데이션 층을 잘게 나눈다', () => {
+    expect(vtracerConfig('low').pathPrecision).toBeLessThan(vtracerConfig('high').pathPrecision)
+    expect(vtracerConfig('high').layerDifference).toBeLessThan(
+      vtracerConfig('low').layerDifference
+    )
+  })
+
+  it('colorPrecision은 상한을 넘지 않는다 — 7은 영역이 뭉개지고 8은 wasm이 죽는다', () => {
+    for (const { value } of TRACE_LEVELS) {
+      expect(vtracerConfig(value).colorPrecision).toBeLessThanOrEqual(MAX_COLOR_PRECISION)
+      expect(MAX_COLOR_PRECISION).toBeLessThan(7)
+    }
+  })
+
+  it('설정 항목이 하나도 빠지지 않는다 — 빠지면 wasm이 패닉한다', () => {
+    const required = [
+      'binary',
+      'mode',
+      'hierarchical',
+      'filterSpeckle',
+      'colorPrecision',
+      'layerDifference',
+      'cornerThreshold',
+      'lengthThreshold',
+      'maxIterations',
+      'spliceThreshold',
+      'pathPrecision',
+    ]
+    for (const { value } of TRACE_LEVELS) {
+      const config = vtracerConfig(value)
+      for (const key of required) {
+        expect(config).toHaveProperty(key)
+        expect(config[key as keyof typeof config]).not.toBeUndefined()
+      }
+    }
   })
 })
 

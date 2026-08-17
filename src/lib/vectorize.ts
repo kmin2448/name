@@ -1,9 +1,43 @@
 // JPG·PNG를 SVG로 바꾸는 기능의 순수 로직.
 // 브라우저 API를 쓰지 않으므로 그대로 테스트할 수 있다.
-import type { TracerOptions } from 'imagetracerjs'
 
 /** 트레이싱 정도 — 원본을 얼마나 세밀하게 따라갈지 */
 export type TraceLevel = 'low' | 'medium' | 'high'
+
+/**
+ * vtracer 설정. 모든 항목이 필수다 —
+ * 하나라도 빠지면 wasm 쪽에서 설정을 읽다가 패닉한다.
+ */
+export type VtracerConfig = {
+  /** 흑백 2치화 모드 (컬러 로고에는 쓰지 않는다) */
+  binary: boolean
+  /** 경로를 어떻게 그릴지 — spline이 베지어 곡선을 만든다 */
+  mode: 'pixel' | 'polygon' | 'spline'
+  /** 색 영역을 쌓을지, 뚫을지 */
+  hierarchical: 'stacked' | 'cutout'
+  /** 이 화소 수 이하의 얼룩을 버린다 — 작을수록 잔 디테일을 남긴다 */
+  filterSpeckle: number
+  /** 채널당 유효 비트 수. 7 이상은 영역이 뭉개지거나 wasm이 죽는다 */
+  colorPrecision: number
+  /** 그라데이션을 몇 단계로 끊을지 — 작을수록 층이 많아진다 */
+  layerDifference: number
+  /** 이 각도 미만은 모서리로 본다 — 작을수록 원본 모서리를 살린다 */
+  cornerThreshold: number
+  /** 이 길이 미만의 선분은 잇는다 — 작을수록 촘촘하다 */
+  lengthThreshold: number
+  /** 곡선 맞춤 반복 횟수 */
+  maxIterations: number
+  /** 이 각도를 넘으면 곡선을 나눈다 */
+  spliceThreshold: number
+  /** 출력 좌표 소수점 자리수 */
+  pathPrecision: number
+}
+
+/**
+ * colorPrecision 상한.
+ * 7이면 색 영역이 하나로 뭉개지고, 8이면 vtracer 내부(color_clusters)에서 패닉한다.
+ */
+export const MAX_COLOR_PRECISION = 6
 
 export type TraceLevelInfo = {
   value: TraceLevel
@@ -16,17 +50,17 @@ export const TRACE_LEVELS: readonly TraceLevelInfo[] = [
   {
     value: 'low',
     label: '낮음',
-    desc: '색을 크게 묶어 단순하게 그립니다. 변환이 가장 빠르고 파일이 가볍습니다.',
+    desc: '색을 크게 묶고 잔 얼룩을 지웁니다. 단순한 도형·아이콘에 알맞습니다.',
   },
   {
     value: 'medium',
     label: '중간',
-    desc: '로고·도장처럼 경계가 뚜렷한 그림에 알맞습니다. 대부분 이 정도면 충분합니다.',
+    desc: '로고·교표처럼 색 경계가 뚜렷한 그림에 알맞습니다. 대부분 이 정도면 충분합니다.',
   },
   {
     value: 'high',
     label: '높음',
-    desc: '원본에 가깝게 세밀히 따라갑니다. 변환이 느리고 파일이 커집니다.',
+    desc: '모서리와 가는 획까지 살립니다. 글자가 들어간 로고라면 이쪽을 쓰세요.',
   },
 ]
 
@@ -49,11 +83,11 @@ export function isSupportedImageType(type: string): boolean {
 export function maxDimension(level: TraceLevel): number {
   switch (level) {
     case 'low':
-      return 800
-    case 'medium':
       return 1200
+    case 'medium':
+      return 2000
     case 'high':
-      return 1600
+      return 3000
   }
 }
 
@@ -78,59 +112,57 @@ export function scaledSize(
   }
 }
 
-/** 트레이싱 정도별 imagetracerjs 옵션 */
-export function traceOptions(level: TraceLevel): Partial<TracerOptions> {
-  const common: Partial<TracerOptions> = {
-    // 면으로만 그린다 — 외곽선을 얹으면 인쇄물에서 색이 탁해진다
-    strokewidth: 0,
-    linefilter: false,
-    rightangleenhance: true,
-    viewbox: true,
-    desc: false,
-    scale: 1,
-  }
+/**
+ * 트레이싱 정도별 vtracer 설정.
+ *
+ * 세 단계 모두 spline 모드다. 곡선으로 그려야 로고 테두리가 매끈하게 나온다.
+ * (다각형으로 그리면 확대했을 때 각져 보인다)
+ * 정도는 colorPrecision이 아니라 얼룩 제거·모서리 민감도·좌표 정밀도로 조절한다.
+ * colorPrecision을 올리면 오히려 영역이 뭉개진다.
+ */
+export function vtracerConfig(level: TraceLevel): VtracerConfig {
+  const common = {
+    binary: false,
+    mode: 'spline',
+    hierarchical: 'stacked',
+  } as const
 
   switch (level) {
     case 'low':
       return {
         ...common,
-        numberofcolors: 6,
-        colorquantcycles: 2,
-        mincolorratio: 0.02,
-        pathomit: 12,
-        ltres: 2,
-        qtres: 2,
-        // 흐림을 주면 경계에 중간색 띠가 생겨 오히려 경로가 늘어난다.
-        // '낮음'은 가장 단순해야 하므로 끈다.
-        blurradius: 0,
-        blurdelta: 20,
-        roundcoords: 1,
+        filterSpeckle: 16,
+        colorPrecision: 4,
+        layerDifference: 32,
+        cornerThreshold: 90,
+        lengthThreshold: 8,
+        spliceThreshold: 20,
+        maxIterations: 8,
+        pathPrecision: 2,
       }
     case 'medium':
       return {
         ...common,
-        numberofcolors: 16,
-        colorquantcycles: 3,
-        mincolorratio: 0.01,
-        pathomit: 8,
-        ltres: 1,
-        qtres: 1,
-        blurradius: 0,
-        blurdelta: 20,
-        roundcoords: 2,
+        filterSpeckle: 4,
+        colorPrecision: MAX_COLOR_PRECISION,
+        layerDifference: 16,
+        cornerThreshold: 60,
+        lengthThreshold: 4,
+        spliceThreshold: 45,
+        maxIterations: 10,
+        pathPrecision: 3,
       }
     case 'high':
       return {
         ...common,
-        numberofcolors: 32,
-        colorquantcycles: 5,
-        mincolorratio: 0,
-        pathomit: 1,
-        ltres: 0.5,
-        qtres: 0.5,
-        blurradius: 0,
-        blurdelta: 20,
-        roundcoords: 2,
+        filterSpeckle: 1,
+        colorPrecision: MAX_COLOR_PRECISION,
+        layerDifference: 8,
+        cornerThreshold: 30,
+        lengthThreshold: 2,
+        spliceThreshold: 60,
+        maxIterations: 16,
+        pathPrecision: 5,
       }
   }
 }
