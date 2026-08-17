@@ -191,12 +191,12 @@ export function RosterPanel({ open, onOpenChange, getPayload, onLoad, pageCount,
 
   return (
     <>
-      {/* 토글 버튼 — 썸네일 버튼 아래. 안내 문구가 버튼 왼쪽에 항상 붙어 다닌다 */}
+      {/* 토글 버튼 — 썸네일 버튼 아래 (우측 두 번째). 안내 문구가 버튼 왼쪽에 항상 붙어 다닌다 */}
       <div
         className="fixed z-50 flex items-center gap-2 pointer-events-none"
         style={{
           right: open ? PANEL_WIDTH : 0,
-          top: '48%',
+          top: '25%',
           transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}
@@ -257,6 +257,19 @@ export function RosterPanel({ open, onOpenChange, getPayload, onLoad, pageCount,
                 <GoogleMark />
                 구글로 로그인
               </button>
+
+              <div className="text-[11px] text-gray-500 leading-relaxed text-left border-t border-gray-100 pt-3 mt-1 space-y-1.5">
+                <p>
+                  배경 서식 저장을 위해 구글 드라이브 액세스 권한 승인이 필요합니다. 사용자가
+                  업로드하는 배경 이미지와 서식 정보 외에 다른 정보는 저장되지 않습니다.
+                </p>
+                <p className="text-gray-400">
+                  권한을 승인하지 않아도 <span className="font-medium text-gray-500">명단 관리는
+                  그대로 이용</span>할 수 있습니다. 승인하지 않으면 &ldquo;내 디자인&rdquo;의 배경·오버레이
+                  저장만 제한되고, 다른 제약은 없습니다. 나중에 다시 로그인해 권한을 허용할 수도
+                  있습니다.
+                </p>
+              </div>
             </div>
           ) : (
             <>

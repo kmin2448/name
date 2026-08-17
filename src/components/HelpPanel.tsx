@@ -105,28 +105,24 @@ export function HelpPanel({ onOpenChange }: Props) {
 
   return (
     <>
-      {/* 토글 버튼 — 스크롤과 무관하게 항상 오른쪽 고정 */}
+      {/* 토글 버튼 — 오른쪽 아래 접속 수 표시 바로 위에 뜨는 플로팅 아이콘 */}
       <button
         onClick={toggle}
-        className="fixed z-50 bg-[#475569] text-white flex flex-col items-center gap-1.5 px-1.5 py-4 rounded-l-lg shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
+        className="fixed z-50 w-10 h-10 rounded-full bg-[#475569] text-white flex items-center justify-center shadow-lg hover:bg-[#334155] active:bg-[#1e293b]"
         style={{
-          right: open ? PANEL_WIDTH : 0,
-          top: 'calc(52px + 2%)',
+          right: open ? PANEL_WIDTH + 12 : 12,
+          bottom: 52,
           transition: 'right 300ms ease',
         }}
         title={open ? '닫기' : '사용법 안내'}
+        aria-label={open ? '사용법 닫기' : '사용법 안내'}
       >
         {open ? (
           <X className="w-4 h-4" />
         ) : (
           <>
-            <BookOpen className="w-4 h-4" />
-            <span
-              className="text-[11px] font-medium tracking-wide"
-              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-            >
-              사용법
-            </span>
+            <BookOpen className="w-5 h-5" />
+            <span className="sr-only">사용법</span>
           </>
         )}
       </button>

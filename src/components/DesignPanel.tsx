@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Image as ImageIcon, X, Save, Trash2, Download, Pencil } from 'lucide-react'
 import { ApplyMode, DesignImages, DesignPayload, DesignSummary, MAX_DESIGNS } from '@/lib/designs'
@@ -38,6 +38,8 @@ async function readError(res: Response, fallback: string): Promise<string> {
 export function DesignPanel({ open, onOpenChange, state, onApply, showHint }: Props) {
   const { data: session } = useSession()
   const email = session?.user?.email ?? null
+  // 로그인은 했지만 동의 화면에서 드라이브 항목을 체크 해제한 경우
+  const hasDriveScope = session?.hasDriveScope === true
 
   const [items, setItems] = useState<DesignSummary[]>([])
   const [title, setTitle] = useState('')
@@ -179,7 +181,7 @@ export function DesignPanel({ open, onOpenChange, state, onApply, showHint }: Pr
         className="fixed z-50 flex items-center gap-2 pointer-events-none"
         style={{
           right: open ? PANEL_WIDTH : 0,
-          top: '71%',
+          top: '48%',
           transform: 'translateY(-50%)',
           transition: 'right 300ms ease',
         }}
@@ -230,6 +232,26 @@ export function DesignPanel({ open, onOpenChange, state, onApply, showHint }: Pr
               최대 {MAX_DESIGNS}건까지 저장할 수 있습니다.<br />
               <span className="text-gray-400">우측 &ldquo;내 명단&rdquo; 패널에서 로그인해 주세요.</span>
             </p>
+          ) : !hasDriveScope ? (
+            <div className="py-8 flex flex-col items-center gap-3">
+              <p className="text-xs text-gray-500 text-center leading-relaxed">
+                구글 드라이브 액세스 권한을 승인하지 않아<br />
+                디자인을 저장할 수 없습니다.<br />
+                <span className="text-gray-400">
+                  명단 관리는 지금 그대로 이용할 수 있습니다.
+                </span>
+              </p>
+              <button
+                onClick={() => signIn('google')}
+                className="text-xs px-3 py-1.5 rounded bg-[#475569] text-white hover:bg-[#334155] active:bg-[#1e293b] transition-colors"
+              >
+                드라이브 권한 허용하기
+              </button>
+              <p className="text-[11px] text-gray-400 text-center leading-relaxed">
+                업로드한 배경 이미지와 서식 정보만 저장되며,<br />
+                드라이브의 다른 파일에는 접근하지 않습니다.
+              </p>
+            </div>
           ) : (
             <>
               {/* 현재 디자인 저장 */}

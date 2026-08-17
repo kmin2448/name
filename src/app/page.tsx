@@ -549,6 +549,7 @@ export default function Home() {
         onAddPage={handleAddPage}
         onDeletePage={handleDeletePage}
         showHint={showPanelHints}
+        onUploadExcel={() => excelInputRef.current?.click()}
       />
       <div className="h-screen flex flex-col">
         <header className="bg-[#475569] text-white shrink-0 flex items-center gap-1.5 px-4 py-2 overflow-x-auto">

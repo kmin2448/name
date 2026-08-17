@@ -3,8 +3,8 @@ import { getToken } from 'next-auth/jwt'
 import GoogleProvider from 'next-auth/providers/google'
 import type { NextRequest } from 'next/server'
 
-// 앱이 직접 만든 파일만 접근하는 좁은 범위 — 사용자의 기존 드라이브 파일은 볼 수 없다.
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+import { DRIVE_SCOPE, grantedDriveScope } from '@/lib/googleScopes'
+
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
 /** 만료 직전에 미리 갱신하기 위한 여유 시간 */
@@ -15,6 +15,12 @@ type GoogleTokens = {
   refreshToken?: string
   /** access token 만료 시각 (epoch ms) */
   expiresAt?: number
+  /**
+   * 드라이브 권한을 실제로 승인받았는지.
+   * 구글 동의 화면에서 드라이브 항목만 체크 해제해도 로그인 자체는 성공하므로,
+   * 승인된 범위를 따로 확인해 둔다.
+   */
+  hasDriveScope?: boolean
   /** 갱신에 실패해 다시 로그인해야 하는 상태 */
   error?: string
 }
@@ -38,6 +44,7 @@ async function refreshAccessToken(tokens: GoogleTokens): Promise<GoogleTokens> {
       access_token?: string
       expires_in?: number
       refresh_token?: string
+      scope?: string
     }
     if (!res.ok || !data.access_token) return { ...tokens, error: 'RefreshFailed' }
 
@@ -46,6 +53,8 @@ async function refreshAccessToken(tokens: GoogleTokens): Promise<GoogleTokens> {
       // 구글은 갱신 시 refresh token을 다시 주지 않는 경우가 많다
       refreshToken: data.refresh_token ?? tokens.refreshToken,
       expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
+      // 갱신 응답에 scope가 없으면 최초 승인 결과를 그대로 유지한다
+      hasDriveScope: data.scope ? grantedDriveScope(data.scope) : tokens.hasDriveScope,
     }
   } catch {
     return { ...tokens, error: 'RefreshFailed' }
@@ -79,6 +88,7 @@ export const authOptions: NextAuthOptions = {
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
           expiresAt: account.expires_at ? account.expires_at * 1000 : undefined,
+          hasDriveScope: grantedDriveScope(account.scope),
         } satisfies GoogleTokens
         return token
       }
@@ -95,6 +105,8 @@ export const authOptions: NextAuthOptions = {
       // 드라이브 접근 권한이 끊겼으면 클라이언트가 다시 로그인하도록 알린다
       const google = token.google as GoogleTokens | undefined
       if (google?.error) session.error = google.error
+      // 디자인 저장 기능을 쓸 수 있는지 화면에서 판단하기 위한 값 (토큰 자체는 내려보내지 않는다)
+      session.hasDriveScope = !!google?.hasDriveScope && !google?.error
       return session
     },
   },
@@ -128,6 +140,11 @@ export async function getDriveAccessToken(req: NextRequest): Promise<string> {
 
   if (!google?.accessToken || google.error) {
     throw new DriveAuthError('구글 드라이브 권한이 만료되었습니다. 다시 로그인해 주세요.')
+  }
+  if (!google.hasDriveScope) {
+    throw new DriveAuthError(
+      '구글 드라이브 접근 권한을 승인하지 않아 디자인을 저장할 수 없습니다. 다시 로그인해 권한을 허용해 주세요.'
+    )
   }
   return google.accessToken
 }

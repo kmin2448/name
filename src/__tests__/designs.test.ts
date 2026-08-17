@@ -13,6 +13,7 @@ import {
   toDesignRow,
 } from '@/lib/designs'
 import { base64ByteLength, parseDataUrl } from '@/lib/googleDrive'
+import { grantedDriveScope } from '@/lib/googleScopes'
 import { DESIGN_COLUMN, designRange } from '@/constants/sheets'
 import { initialState } from '@/hooks/useNameplateState'
 import { NameplateState, OverlayImage, TextFieldConfig } from '@/types/nameplate'
@@ -278,5 +279,22 @@ describe('drive 업로드 보조 함수', () => {
     expect(base64ByteLength('AAAA')).toBe(3)
     expect(base64ByteLength('AAA=')).toBe(2)
     expect(base64ByteLength('AA==')).toBe(1)
+  })
+})
+
+describe('grantedDriveScope', () => {
+  it('드라이브 범위를 승인했으면 true', () => {
+    expect(
+      grantedDriveScope('openid email profile https://www.googleapis.com/auth/drive.file')
+    ).toBe(true)
+  })
+
+  it('동의 화면에서 드라이브만 체크 해제하면 false (로그인 자체는 성공)', () => {
+    expect(grantedDriveScope('openid email profile')).toBe(false)
+    expect(grantedDriveScope(undefined)).toBe(false)
+  })
+
+  it('비슷한 이름의 다른 범위는 인정하지 않는다', () => {
+    expect(grantedDriveScope('https://www.googleapis.com/auth/drive.file.readonly')).toBe(false)
   })
 })
