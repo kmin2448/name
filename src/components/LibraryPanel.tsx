@@ -168,6 +168,14 @@ export function LibraryPanel({
                   드라이브 액세스 권한을 따로 여쭤봅니다. 그때 승인하지 않아도 로그인은 유지되고,
                   명단 관리는 그대로 이용할 수 있습니다.
                 </p>
+                <p className="text-gray-400">
+                  저장한 배경·오버레이 이미지는{' '}
+                  <span className="font-medium text-gray-500">
+                    본인 구글 드라이브의 &ldquo;명패 제작기&rdquo; 폴더
+                  </span>
+                  에 보관됩니다. 이 사이트의 서버에는 이미지를 따로 보관하지 않으며, 드라이브에서
+                  직접 확인하거나 지울 수 있습니다.
+                </p>
               </div>
             </div>
           ) : (

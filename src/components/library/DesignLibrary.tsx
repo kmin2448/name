@@ -162,8 +162,10 @@ export function DesignLibrary({ state, onApply, hasDriveScope }: Props) {
           드라이브 권한 허용하기
         </button>
         <p className="text-[11px] text-gray-400 text-center leading-relaxed">
-          업로드한 배경 이미지와 서식 정보만 저장되며,<br />
-          드라이브의 다른 파일에는 접근하지 않습니다.<br />
+          이미지는 <span className="text-gray-500">본인 구글 드라이브</span>의<br />
+          &ldquo;명패 제작기&rdquo; 폴더에 저장됩니다.<br />
+          앱이 만든 파일에만 접근하며, 드라이브의<br />
+          다른 파일은 보거나 건드리지 않습니다.<br />
           승인하지 않고 화면을 닫아도 로그인은 유지됩니다.
         </p>
       </div>
